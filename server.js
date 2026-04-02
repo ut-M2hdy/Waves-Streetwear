@@ -105,6 +105,21 @@ async function ensureUsersFlagsColumns() {
   }
 }
 
+async function ensureGuestProfilesSchema() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS guest_profiles (
+      phone VARCHAR(30) NOT NULL,
+      full_name VARCHAR(160) NULL,
+      address TEXT NULL,
+      is_verified TINYINT(1) NOT NULL DEFAULT 0,
+      is_blacklisted TINYINT(1) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (phone)
+    ) ENGINE=InnoDB`
+  );
+}
+
 async function ensureProductsSchema() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS products (
@@ -525,6 +540,14 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ message: "Phone is required." });
     }
 
+    if (!isValidFullName(fullName)) {
+      return res.status(400).json({ message: "Full name must contain a space and no numbers." });
+    }
+
+    if (!isValidTunisiaPhone(resolvedPhone)) {
+      return res.status(400).json({ message: "Phone must be +216 followed by 8 numbers." });
+    }
+
     const amountNumber = Number(amount);
     const unitPriceNumber = Number(unitPriceDt);
     if (!Number.isFinite(amountNumber) || amountNumber < 1 || !Number.isFinite(unitPriceNumber) || unitPriceNumber <= 0) {
@@ -600,14 +623,18 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
   try {
     await ensureOrdersDeliveredAtColumn();
     await ensureUsersFlagsColumns();
+    await ensureGuestProfilesSchema();
     const [rows] = await pool.query(
-      `SELECT o.id, o.product_name, o.color, o.size, o.amount, o.unit_price_dt, o.delivery_fee_dt, o.total_price_dt, o.note, o.status, o.delivered_at, o.created_at,
+      `SELECT o.id, o.user_id, o.product_name, o.color, o.size, o.amount, o.unit_price_dt, o.delivery_fee_dt, o.total_price_dt, o.note, o.status, o.delivered_at, o.created_at,
+              o.full_name AS order_full_name, o.phone AS order_phone,
               p.image_url AS product_image_url,
               u.full_name AS account_name, u.phone AS account_phone,
-              u.is_verified AS account_is_verified, u.is_blacklisted AS account_is_blacklisted
+              COALESCE(u.is_verified, gp.is_verified, 0) AS contact_is_verified,
+              COALESCE(u.is_blacklisted, gp.is_blacklisted, 0) AS contact_is_blacklisted
        FROM orders o
        LEFT JOIN products p ON p.id = o.product_id
        LEFT JOIN users u ON u.id = o.user_id
+       LEFT JOIN guest_profiles gp ON gp.phone = o.phone AND o.user_id IS NULL
        ORDER BY o.id DESC`
     );
 
@@ -774,12 +801,135 @@ app.get("/api/admin/users", requireAdmin, async (_req, res) => {
   try {
     await ensureUsersFlagsColumns();
     const [rows] = await pool.query(
-      "SELECT id, full_name, phone, role, is_verified, is_blacklisted, created_at FROM users ORDER BY id DESC"
+      `SELECT u.id, u.full_name, u.phone, u.role, u.is_verified, u.is_blacklisted, u.created_at,
+              (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) AS orders_count
+       FROM users u
+       ORDER BY u.id DESC`
     );
     res.json({ users: rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not fetch users." });
+  }
+});
+
+app.get("/api/admin/guest-users", requireAdmin, async (_req, res) => {
+  try {
+    await ensureGuestProfilesSchema();
+
+    const [orderRows] = await pool.query(
+      `SELECT id, phone, full_name, address, created_at
+       FROM orders
+       WHERE user_id IS NULL
+       ORDER BY created_at DESC, id DESC`
+    );
+
+    const byPhone = new Map();
+    orderRows.forEach((row) => {
+      const phone = String(row.phone || "").trim();
+      if (!phone) return;
+      const currentName = String(row.full_name || "").trim();
+      const currentNameKey = currentName.toLowerCase();
+
+      const existing = byPhone.get(phone);
+      if (!existing) {
+        const namesHistory = currentName ? [currentName] : [];
+        const namesSeen = new Set(currentName ? [currentNameKey] : []);
+        byPhone.set(phone, {
+          phone,
+          full_name: row.full_name || "-",
+          names_history: namesHistory,
+          _names_seen: namesSeen,
+          address: row.address || "",
+          latest_order_at: row.created_at,
+          orders_count: 1
+        });
+        return;
+      }
+
+      existing.orders_count += 1;
+      if (currentName && !existing._names_seen.has(currentNameKey)) {
+        existing.names_history.push(currentName);
+        existing._names_seen.add(currentNameKey);
+      }
+    });
+
+    const phones = Array.from(byPhone.keys());
+    if (!phones.length) {
+      return res.json({ users: [] });
+    }
+
+    const placeholders = phones.map(() => "?").join(",");
+    const [profileRows] = await pool.query(
+      `SELECT phone, is_verified, is_blacklisted
+       FROM guest_profiles
+       WHERE phone IN (${placeholders})`,
+      phones
+    );
+
+    const profileMap = new Map(profileRows.map((row) => [String(row.phone), row]));
+
+    const users = phones.map((phone) => {
+      const base = byPhone.get(phone);
+      const profile = profileMap.get(phone);
+      return {
+        phone,
+        full_name: base?.full_name || "-",
+        names_history: Array.isArray(base?.names_history) ? base.names_history : [],
+        address: base?.address || "",
+        latest_order_at: base?.latest_order_at || null,
+        orders_count: Number(base?.orders_count || 0),
+        is_verified: Number(profile?.is_verified || 0),
+        is_blacklisted: Number(profile?.is_blacklisted || 0)
+      };
+    }).sort((a, b) => {
+      const aTime = a.latest_order_at ? new Date(a.latest_order_at).getTime() : 0;
+      const bTime = b.latest_order_at ? new Date(b.latest_order_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    res.json({ users });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not fetch non-registered users." });
+  }
+});
+
+app.patch("/api/admin/guest-users/:phone/flags", requireAdmin, async (req, res) => {
+  try {
+    await ensureGuestProfilesSchema();
+
+    const phone = decodeURIComponent(String(req.params.phone || "")).trim();
+    const verified = req.body?.verified === true || req.body?.verified === "true" || req.body?.verified === 1 || req.body?.verified === "1";
+    const blacklisted = req.body?.blacklisted === true || req.body?.blacklisted === "true" || req.body?.blacklisted === 1 || req.body?.blacklisted === "1";
+
+    if (!phone) {
+      return res.status(400).json({ message: "Phone is required." });
+    }
+
+    const [existsRows] = await pool.query(
+      "SELECT id FROM orders WHERE user_id IS NULL AND phone = ? LIMIT 1",
+      [phone]
+    );
+
+    if (!existsRows.length) {
+      return res.status(404).json({ message: "Guest phone not found in orders." });
+    }
+
+    const nextVerified = verified ? 1 : 0;
+    const nextBlacklisted = blacklisted ? 1 : 0;
+
+    await pool.query(
+      `INSERT INTO guest_profiles (phone, is_verified, is_blacklisted)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE is_verified = VALUES(is_verified), is_blacklisted = VALUES(is_blacklisted)`,
+      [phone, nextVerified, nextBlacklisted]
+    );
+
+    res.json({ ok: true, is_verified: nextVerified, is_blacklisted: nextBlacklisted });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not update non-registered user flags." });
   }
 });
 
@@ -1198,14 +1348,20 @@ ensureUsersAddressColumn().finally(() => {
               console.error("Revenue schema check failed:", error.message);
             })
             .finally(() => {
-              ensureOrdersDeliveredAtColumn()
+              ensureGuestProfilesSchema()
                 .catch((error) => {
-                  console.error("Orders schema check failed:", error.message);
+                  console.error("Guest profiles schema check failed:", error.message);
                 })
                 .finally(() => {
-                  app.listen(PORT, () => {
-                    console.log(`WAVES server running on http://localhost:${PORT}`);
-                  });
+                  ensureOrdersDeliveredAtColumn()
+                    .catch((error) => {
+                      console.error("Orders schema check failed:", error.message);
+                    })
+                    .finally(() => {
+                      app.listen(PORT, () => {
+                        console.log(`WAVES server running on http://localhost:${PORT}`);
+                      });
+                    });
                 });
             });
         });

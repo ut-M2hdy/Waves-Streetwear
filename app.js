@@ -112,7 +112,6 @@ function renderProducts() {
         <div class="name">${p.name}</div>
         <div class="price">${p.price} Dt</div>
       </div>
-      <div class="delivery-note">+9 Dt delivery</div>
       <div class="desc">${p.desc}</div>
       <label class="color-picker-label">
         Color

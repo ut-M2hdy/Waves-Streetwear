@@ -2,6 +2,9 @@ const statsEl = document.getElementById("admin-stats");
 const productsEl = document.getElementById("admin-products");
 const ordersEl = document.getElementById("admin-orders");
 const usersEl = document.getElementById("admin-users");
+const notUsersEl = document.getElementById("admin-not-users");
+const usersSearchInput = document.getElementById("admin-users-search");
+const notUsersSearchInput = document.getElementById("admin-not-users-search");
 const revenuesEl = document.getElementById("admin-revenues");
 const monthlySalesEl = document.getElementById("admin-monthly-sales");
 const monthlyRevenuesEl = document.getElementById("admin-monthly-revenues");
@@ -18,6 +21,9 @@ const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned", "cancel
 const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey"];
 let availableImageFiles = [];
 let currentAdminId = null;
+let allUsersCache = [];
+let allNotUsersCache = [];
+let allAdminOrdersCache = [];
 
 function monthLabel(monthKey) {
   const [year, month] = String(monthKey || "").split("-");
@@ -398,6 +404,7 @@ async function requireAdminPageAccess() {
     document.getElementById("section-sells")?.classList.add("hidden");
     document.getElementById("section-revenues")?.classList.add("hidden");
     document.getElementById("section-users")?.classList.add("hidden");
+    document.getElementById("section-not-users")?.classList.add("hidden");
     adminNavButtons.forEach((btn) => {
       if (btn.dataset.target !== "section-overview") {
         btn.classList.add("hidden");
@@ -736,6 +743,7 @@ async function loadOrders() {
 
   const data = await response.json();
   const orders = data.orders || [];
+  allAdminOrdersCache = Array.isArray(orders) ? orders : [];
 
   if (!orders.length) {
     ordersEl.innerHTML = '<p class="desc">No sells yet.</p>';
@@ -752,12 +760,14 @@ async function loadOrders() {
     const deliveredLocked = String(o.status || "").toLowerCase() === "delivered"
       && Number.isFinite(deliveredAtMs)
       && (Date.now() - deliveredAtMs >= 24 * 60 * 60 * 1000);
-    const isVerified = Number(o.account_is_verified || 0) === 1;
-    const isBlacklisted = Number(o.account_is_blacklisted || 0) === 1;
+    const isVerified = Number(o.contact_is_verified || 0) === 1;
+    const isBlacklisted = Number(o.contact_is_blacklisted || 0) === 1;
     const accountSigns = [
       isVerified ? '<span class="admin-user-sign sign-verified">Verified</span>' : "",
       isBlacklisted ? '<span class="admin-user-sign sign-blacklisted">Blacklisted</span>' : ""
     ].filter(Boolean).join(" ");
+    const buyerName = o.account_name || o.order_full_name || "-";
+    const buyerPhone = o.account_phone || o.order_phone || "-";
 
     return `
     <article class="history-item">
@@ -768,7 +778,7 @@ async function loadOrders() {
         <div class="name">#${o.id} - ${o.product_name}</div>
         <div class="price">${total.toFixed(2)} Dt</div>
       </div>
-      <div class="desc">Buyer: <strong>${o.account_name || "-"}</strong> (<strong>${o.account_phone || "-"}</strong>)</div>
+      <div class="desc">Buyer: <strong>${buyerName}</strong> (<strong>${buyerPhone}</strong>)</div>
       ${accountSigns ? `<div class="desc">${accountSigns}</div>` : ""}
       <div class="desc">Color: <strong>${o.color}</strong> • Size: <strong>${o.size}</strong> • Amount: <strong>${o.amount}</strong></div>
       <div class="desc">Product: <strong>${productTotal.toFixed(2)} Dt</strong> + Delivery: <strong>${delivery > 0 ? `${delivery.toFixed(2)} Dt` : "OFF"}</strong> = Total: <strong>${total.toFixed(2)} Dt</strong></div>
@@ -920,6 +930,52 @@ function formatPlainDt(value) {
   return `${Math.abs(Number(value || 0)).toFixed(2)} Dt`;
 }
 
+function getOrderTotalDt(order) {
+  const unit = Number(order?.unit_price_dt || 0);
+  const amount = Number(order?.amount || 0);
+  const delivery = Number(order?.delivery_fee_dt || 0);
+  return (unit * amount) + delivery;
+}
+
+async function ensureAdminOrdersCache() {
+  if (Array.isArray(allAdminOrdersCache) && allAdminOrdersCache.length) return;
+  try {
+    const response = await fetch("/api/admin/orders", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    allAdminOrdersCache = Array.isArray(data.orders) ? data.orders : [];
+  } catch {
+    // ignore
+  }
+}
+
+async function openContactOrdersDetails({ title, matcher }) {
+  await ensureAdminOrdersCache();
+  const matched = (allAdminOrdersCache || []).filter((o) => matcher(o));
+
+  if (!matched.length) {
+    openMonthDetails(title, '<p class="desc">No orders found for this contact.</p>');
+    return;
+  }
+
+  const rows = matched.map((o) => {
+    const total = getOrderTotalDt(o);
+    return `
+      <article class="history-item">
+        <div class="meta">
+          <div class="name">#${escapeHtml(o.id)} - ${escapeHtml(o.product_name || "-")}</div>
+          <div class="price">${Number(total).toFixed(2)} Dt</div>
+        </div>
+        <div class="desc">Status: <strong>${escapeHtml(o.status || "pending")}</strong></div>
+        <div class="desc">Color: <strong>${escapeHtml(o.color || "-")}</strong> • Size: <strong>${escapeHtml(o.size || "-")}</strong> • Amount: <strong>${escapeHtml(o.amount || "-")}</strong></div>
+        <div class="desc">Date: ${new Date(o.created_at).toLocaleString()}</div>
+      </article>
+    `;
+  }).join("");
+
+  openMonthDetails(title, rows);
+}
+
 async function loadRevenues() {
   if (!revenuesEl) return;
 
@@ -984,10 +1040,22 @@ async function loadUsers() {
   }
 
   const data = await response.json();
-  const users = data.users || [];
+  allUsersCache = Array.isArray(data.users) ? data.users : [];
+  renderUsersList();
+}
+
+function renderUsersList() {
+  const query = String(usersSearchInput?.value || "").trim().toLowerCase();
+  const users = !query
+    ? allUsersCache
+    : allUsersCache.filter((u) => {
+      const name = String(u.full_name || "").toLowerCase();
+      const phone = String(u.phone || "").toLowerCase();
+      return name.includes(query) || phone.includes(query);
+    });
 
   if (!users.length) {
-    usersEl.innerHTML = '<p class="desc">No users yet.</p>';
+    usersEl.innerHTML = `<p class="desc">${allUsersCache.length ? "No users match your search." : "No users yet."}</p>`;
     return;
   }
 
@@ -998,12 +1066,14 @@ async function loadUsers() {
         <div class="price">${u.role}</div>
       </div>
       <div class="desc">Phone: ${u.phone}</div>
+      <div class="desc">Orders bought: <strong>${Number(u.orders_count || 0)}</strong></div>
       <div class="desc">Created: ${new Date(u.created_at).toLocaleString()}</div>
       <div class="desc">
         ${Number(u.is_verified || 0) === 1 ? '<span class="admin-user-sign sign-verified">Verified</span>' : ''}
         ${Number(u.is_blacklisted || 0) === 1 ? '<span class="admin-user-sign sign-blacklisted">Blacklisted</span>' : ''}
       </div>
       <div class="admin-status-group">
+        <button type="button" class="admin-status-btn status-confirmed" data-action="view-user-orders" data-id="${u.id}">Details</button>
         <button
           type="button"
           class="admin-status-btn status-delivered"
@@ -1096,7 +1166,172 @@ async function loadUsers() {
       await loadSummary();
     });
   });
+
+  usersEl.querySelectorAll('button[data-action="view-user-orders"]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      const userId = Number(button.dataset.id || 0);
+      if (!userId) return;
+
+      const user = allUsersCache.find((u) => Number(u.id) === userId);
+      const title = `Orders details - ${user?.full_name || `User #${userId}`}`;
+
+      await openContactOrdersDetails({
+        title,
+        matcher: (o) => Number(o.user_id || 0) === userId
+      });
+    });
+  });
 }
+
+async function loadNotUsers() {
+  if (!notUsersEl) return;
+
+  let response;
+  try {
+    response = await fetch("/api/admin/guest-users", { cache: "no-store" });
+  } catch {
+    showSectionError(notUsersEl, "Server not reachable. Start backend first.");
+    return;
+  }
+
+  if (!response.ok) {
+    showSectionError(notUsersEl, "Could not load non-registered users.");
+    return;
+  }
+
+  const payload = await response.json();
+  allNotUsersCache = Array.isArray(payload.users) ? payload.users : [];
+  renderNotUsersList();
+}
+
+function renderNotUsersList() {
+  const query = String(notUsersSearchInput?.value || "").trim().toLowerCase();
+  const users = !query
+    ? allNotUsersCache
+    : allNotUsersCache.filter((u) => {
+      const title = Array.isArray(u.names_history) && u.names_history.length
+        ? u.names_history.join(" ")
+        : String(u.full_name || "");
+      const phone = String(u.phone || "");
+      return title.toLowerCase().includes(query) || phone.toLowerCase().includes(query);
+    });
+
+  if (!users.length) {
+    notUsersEl.innerHTML = `<p class="desc">${allNotUsersCache.length ? "No non-registered users match your search." : "No non-registered buyers yet."}</p>`;
+    return;
+  }
+
+  notUsersEl.innerHTML = users.map((u) => `
+    <article class="history-item">
+      <div class="meta">
+        <div class="name">${Array.isArray(u.names_history) && u.names_history.length ? u.names_history.join(" / ") : (u.full_name || "-")}</div>
+        <div class="price">Guest</div>
+      </div>
+      <div class="desc">Phone: ${u.phone}</div>
+      <div class="desc">Orders bought: <strong>${Number(u.orders_count || 0)}</strong></div>
+      <div class="desc">Last order: ${u.latest_order_at ? new Date(u.latest_order_at).toLocaleString() : "-"}</div>
+      <div class="desc">Address: ${u.address || "-"}</div>
+      <div class="desc">
+        ${Number(u.is_verified || 0) === 1 ? '<span class="admin-user-sign sign-verified">Verified</span>' : ''}
+        ${Number(u.is_blacklisted || 0) === 1 ? '<span class="admin-user-sign sign-blacklisted">Blacklisted</span>' : ''}
+      </div>
+      <div class="admin-status-group">
+        <button
+          type="button"
+          class="admin-status-btn status-confirmed"
+          data-action="view-guest-orders"
+          data-phone="${encodeURIComponent(u.phone)}">
+          Details
+        </button>
+        <button
+          type="button"
+          class="admin-status-btn status-delivered"
+          data-action="guest-toggle-verified"
+          data-phone="${encodeURIComponent(u.phone)}"
+          data-current="${Number(u.is_verified || 0)}">
+          ${Number(u.is_verified || 0) === 1 ? "Unverify" : "Verify"}
+        </button>
+        <button
+          type="button"
+          class="admin-status-btn status-cancelled"
+          data-action="guest-toggle-blacklisted"
+          data-phone="${encodeURIComponent(u.phone)}"
+          data-current="${Number(u.is_blacklisted || 0)}">
+          ${Number(u.is_blacklisted || 0) === 1 ? "Unblacklist" : "Blacklist"}
+        </button>
+      </div>
+    </article>
+  `).join("");
+
+  notUsersEl.querySelectorAll('button[data-action="guest-toggle-verified"]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      const phone = String(button.dataset.phone || "").trim();
+      const currentlyVerified = Number(button.dataset.current || 0) === 1;
+      if (!phone) return;
+
+      const response = await fetch(`/api/admin/guest-users/${phone}/flags`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verified: !currentlyVerified, blacklisted: false })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showMessage(payload.message || "Could not update verified status.");
+        return;
+      }
+
+      showMessage(`Guest ${currentlyVerified ? "unverified" : "verified"}.`, true);
+      await Promise.all([loadNotUsers(), loadOrders()]);
+    });
+  });
+
+  notUsersEl.querySelectorAll('button[data-action="guest-toggle-blacklisted"]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      const phone = String(button.dataset.phone || "").trim();
+      const currentlyBlacklisted = Number(button.dataset.current || 0) === 1;
+      if (!phone) return;
+
+      const response = await fetch(`/api/admin/guest-users/${phone}/flags`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verified: false, blacklisted: !currentlyBlacklisted })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showMessage(payload.message || "Could not update blacklist status.");
+        return;
+      }
+
+      showMessage(`Guest ${currentlyBlacklisted ? "removed from blacklist" : "blacklisted"}.`, true);
+      await Promise.all([loadNotUsers(), loadOrders()]);
+    });
+  });
+
+  notUsersEl.querySelectorAll('button[data-action="view-guest-orders"]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      const phone = decodeURIComponent(String(button.dataset.phone || "")).trim();
+      if (!phone) return;
+
+      const guest = allNotUsersCache.find((u) => String(u.phone || "").trim() === phone);
+      const title = `Orders details - ${guest?.full_name || phone}`;
+
+      await openContactOrdersDetails({
+        title,
+        matcher: (o) => String(o.order_phone || "").trim() === phone && !o.user_id
+      });
+    });
+  });
+}
+
+usersSearchInput?.addEventListener("input", () => {
+  renderUsersList();
+});
+
+notUsersSearchInput?.addEventListener("input", () => {
+  renderNotUsersList();
+});
 
 addProductForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1183,6 +1418,7 @@ revenueAdjustForm?.addEventListener("submit", async (event) => {
     loadProducts(),
     loadOrders(),
     loadUsers(),
+    loadNotUsers(),
     loadRevenues(),
     loadMonthlyRevenuesOverview()
   ]);

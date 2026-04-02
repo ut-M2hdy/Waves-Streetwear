@@ -70,6 +70,19 @@ CREATE TABLE IF NOT EXISTS revenue_adjustments (
   CONSTRAINT fk_revenue_adjustments_user FOREIGN KEY (created_by_user_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS guest_profiles (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  phone VARCHAR(30) NOT NULL,
+  full_name VARCHAR(160) NULL,
+  address TEXT NULL,
+  is_verified TINYINT(1) NOT NULL DEFAULT 0,
+  is_blacklisted TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_guest_profiles_phone (phone)
+) ENGINE=InnoDB;
+
 -- If your table already exists, run this once to allow guest orders:
 -- ALTER TABLE orders MODIFY user_id INT UNSIGNED NULL;
 -- ALTER TABLE orders ADD COLUMN delivered_at DATETIME NULL AFTER status;
@@ -83,6 +96,18 @@ CREATE TABLE IF NOT EXISTS revenue_adjustments (
 -- ALTER TABLE products MODIFY image_url LONGTEXT NULL;
 -- ALTER TABLE products ADD COLUMN color_images_map LONGTEXT AFTER image_url;
 -- ALTER TABLE products MODIFY color_images_map LONGTEXT NULL;
+-- CREATE TABLE IF NOT EXISTS guest_profiles (
+--   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--   phone VARCHAR(30) NOT NULL,
+--   full_name VARCHAR(160) NULL,
+--   address TEXT NULL,
+--   is_verified TINYINT(1) NOT NULL DEFAULT 0,
+--   is_blacklisted TINYINT(1) NOT NULL DEFAULT 0,
+--   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--   PRIMARY KEY (id),
+--   UNIQUE KEY uq_guest_profiles_phone (phone)
+-- ) ENGINE=InnoDB;
 
 -- Seed products once (safe to re-import: existing ids are ignored)
 INSERT IGNORE INTO products (id, name, price_cents, wave, colors_csv, main_color, sold_out, image_url, color_images_map, description) VALUES

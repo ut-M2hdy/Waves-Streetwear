@@ -25,6 +25,45 @@ let catalogProducts = [...products];
 let product = null;
 let selectedColor = "W";
 
+function enforcePhonePrefix(input) {
+  if (!input) return;
+
+  const fixValue = () => {
+    let value = String(input.value || "").replace(/\s+/g, "");
+    if (!value.startsWith("+216")) {
+      value = `+216${value.replace(/^\+?216?/, "")}`;
+    }
+    const digits = value.slice(4).replace(/\D/g, "").slice(0, 8);
+    input.value = `+216${digits}`;
+  };
+
+  input.addEventListener("input", fixValue);
+  input.addEventListener("focus", () => {
+    if (!input.value.startsWith("+216")) {
+      input.value = "+216";
+    }
+  });
+  input.addEventListener("keydown", (event) => {
+    if ((event.key === "Backspace" || event.key === "Delete") && input.selectionStart <= 4) {
+      event.preventDefault();
+    }
+  });
+
+  fixValue();
+}
+
+function isValidTunisiaPhone(phone) {
+  return /^\+216\d{8}$/.test(String(phone || "").trim());
+}
+
+function isValidFullName(fullName) {
+  const value = String(fullName || "").trim();
+  if (!value || /\d/.test(value)) return false;
+  return value.includes(" ");
+}
+
+enforcePhonePrefix(phoneInput);
+
 function parseProductColors(row, fallbackColors = ["W"]) {
   const allowed = new Set(["B", "W", "Br", "P", "Grey"]);
   const parsed = String(row?.colors_csv || "")
@@ -157,6 +196,7 @@ async function prefillLoggedInUser() {
     }
     if (phoneInput) {
       phoneInput.value = payload.user.phone || phoneInput.value || "";
+      phoneInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
     if (addressInput) {
       addressInput.value = payload.user.address || addressInput.value || "";
@@ -368,10 +408,23 @@ orderForm.addEventListener("submit", async (event) => {
   const data = new FormData(orderForm);
   const size = data.get("size");
   const amount = Number(data.get("amount") || 1);
-  const fullName = data.get("fullName");
-  const phone = data.get("phone");
+  const fullName = String(data.get("fullName") || "").trim();
+  const phone = String(data.get("phone") || "").trim();
   const address = data.get("address");
   const note = data.get("note");
+
+  if (!isValidFullName(fullName)) {
+    orderConfirmation.textContent = "Full name must contain a space and no numbers.";
+    orderConfirmation.style.display = "block";
+    orderConfirmation.style.color = "#b91c1c";
+    return;
+  }
+  if (!isValidTunisiaPhone(phone)) {
+    orderConfirmation.textContent = "Phone must be +216 followed by 8 numbers.";
+    orderConfirmation.style.display = "block";
+    orderConfirmation.style.color = "#b91c1c";
+    return;
+  }
   const subtotal = product.price * amount;
   const effectiveDelivery = DEFAULT_DELIVERY_FEE;
   const total = subtotal + effectiveDelivery;

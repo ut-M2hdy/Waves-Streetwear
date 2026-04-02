@@ -27,6 +27,7 @@
         <button type="button" class="admin-nav-btn" data-target="section-sells">Sells List</button>
         <button type="button" class="admin-nav-btn" data-target="section-revenues">Revenues</button>
         <button type="button" class="admin-nav-btn" data-target="section-users">Users & Roles</button>
+        <button type="button" class="admin-nav-btn" data-target="section-not-users">Not Users</button>
       </div>
     </section>
 
@@ -110,7 +111,15 @@
     <section class="order-card admin-section" id="section-users">
       <h2>Users & Roles</h2>
       <p class="desc">Admin role can only be set directly in the database. You can delete user accounts here.</p>
+      <input id="admin-users-search" class="admin-search-input" type="text" placeholder="Search users by name or phone" autocomplete="off">
       <div id="admin-users" class="history-list"></div>
+    </section>
+
+    <section class="order-card admin-section" id="section-not-users">
+      <h2>Not Users</h2>
+      <p class="desc">Guest buyers (orders without account). You can verify or blacklist by phone.</p>
+      <input id="admin-not-users-search" class="admin-search-input" type="text" placeholder="Search not users by name or phone" autocomplete="off">
+      <div id="admin-not-users" class="history-list"></div>
     </section>
   </main>
 
@@ -136,6 +145,6 @@
   </dialog>
 
   <script src="auth-ui.js?v=20260401-4"></script>
-  <script src="admin.js?v=20260402-1"></script>
+  <script src="admin.js?v=20260402-6"></script>
 </body>
 </html>

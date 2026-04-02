@@ -11,6 +11,8 @@ const PORT = Number(process.env.PORT || 3000);
 const DEFAULT_DELIVERY_FEE_DT = Number(process.env.DEFAULT_DELIVERY_FEE_DT || 9);
 const SEWING_COST_DT = Number(process.env.SEWING_COST_DT || 35);
 
+app.set("trust proxy", 1);
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "127.0.0.1",
   port: Number(process.env.DB_PORT || 3306),
@@ -31,7 +33,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 1000 * 60 * 60 * 24 * 14
   }
 }));

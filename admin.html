@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel | WAVES</title>
+  <link rel="stylesheet" href="styles.css?v=20260401-5">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="img/logo_waves_TRANS.png" alt="WaveStore logo">
+    </div>
+    <div class="header-actions">
+      <a class="header-link-btn" href="index.html">Back to Shop</a>
+      <a class="header-link-btn" id="auth-btn" href="auth.html">Login</a>
+    </div>
+  </header>
+
+  <main class="product-page">
+    <section class="order-card admin-nav-card">
+      <h2>Admin Sections</h2>
+      <div class="admin-nav-list" id="admin-nav-list">
+        <button type="button" class="admin-nav-btn active" data-target="section-overview">Overview</button>
+        <button type="button" class="admin-nav-btn" data-target="section-add-product">Add Product</button>
+        <button type="button" class="admin-nav-btn" data-target="section-products">Edit Products</button>
+        <button type="button" class="admin-nav-btn" data-target="section-sells">Sells List</button>
+        <button type="button" class="admin-nav-btn" data-target="section-revenues">Revenues</button>
+        <button type="button" class="admin-nav-btn" data-target="section-users">Users & Roles</button>
+      </div>
+    </section>
+
+    <section class="order-card admin-section" id="section-overview">
+      <h1>Admin Dashboard</h1>
+      <div class="admin-stats" id="admin-stats"></div>
+      <h3>Monthly sells</h3>
+      <div id="admin-monthly-sales" class="history-list"></div>
+    </section>
+
+    <section class="order-card admin-section" id="section-add-product">
+      <h2>Add Product</h2>
+      <form id="add-product-form" class="order-form">
+        <label>Product name
+          <input name="name" required>
+        </label>
+        <label>Price (Dt)
+          <input name="priceDt" type="number" min="1" step="0.01" required>
+        </label>
+        <label>Wave
+          <select name="wave" required>
+            <option value="1stDrop">1stDrop</option>
+            <option value="CAIROKEE">CAIROKEE</option>
+            <option value="LEMHAF">LEMHAF</option>
+            <option value="UPSIDE DOWN">UPSIDE DOWN</option>
+          </select>
+        </label>
+        <label>Colors
+          <div class="admin-color-palette" data-palette="add"></div>
+          <input type="hidden" name="colorsCsv" value="W" required>
+          <input type="hidden" name="mainColor" value="W">
+        </label>
+        <label class="payment-option">
+          <input name="soldOut" type="checkbox">
+          Sold out
+        </label>
+        <div class="admin-color-image-editor" data-editor="add"></div>
+        <input type="hidden" name="imageUrl">
+        <input type="hidden" name="colorImagesMap">
+        <label>Description
+          <textarea name="description"></textarea>
+        </label>
+        <button class="btn primary" type="submit">Add product</button>
+      </form>
+      <div id="admin-message" class="confirmation"></div>
+    </section>
+
+    <section class="order-card admin-section" id="section-products">
+      <h2>Products (Edit)</h2>
+      <div id="admin-products" class="history-list"></div>
+    </section>
+
+    <section class="order-card admin-section" id="section-sells">
+      <h2>Sells List</h2>
+      <div id="admin-orders" class="history-list"></div>
+    </section>
+
+    <section class="order-card admin-section" id="section-revenues">
+      <h2>Revenues</h2>
+      <p class="desc">Current month only. Each new month starts from 0. Old months stay in Monthly revenues fiche.</p>
+      <form id="admin-revenue-adjust-form" class="order-form admin-revenue-form">
+        <label>Action title
+          <input name="title" required placeholder="Bought boxes">
+        </label>
+        <label>Type
+          <select name="type" required>
+            <option value="add">Add (+)</option>
+            <option value="remove">Remove (-)</option>
+          </select>
+        </label>
+        <label>Amount (Dt)
+          <input name="amountDt" type="number" min="0.01" step="0.01" required placeholder="10">
+        </label>
+        <button class="btn primary" type="submit">Save action</button>
+      </form>
+      <div id="admin-revenues" class="history-list"></div>
+      <h3>Monthly revenues</h3>
+      <div id="admin-monthly-revenues" class="history-list"></div>
+    </section>
+
+    <section class="order-card admin-section" id="section-users">
+      <h2>Users & Roles</h2>
+      <p class="desc">Admin role can only be set directly in the database. You can delete user accounts here.</p>
+      <div id="admin-users" class="history-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-left">
+      <div>© 2026, Waves Streetwear</div>
+      <div class="contact-links">
+        <span>Contact us:</span>
+        <a class="contact-link" href="https://www.instagram.com/waves__streetwear/" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a class="contact-link" href="https://www.tiktok.com/@waves_streetwear" target="_blank" rel="noopener noreferrer">TikTok</a>
+        <a class="contact-link" href="https://www.facebook.com/profile.php?id=61580095130092&locale=ar_AR" target="_blank" rel="noopener noreferrer">Facebook</a>
+      </div>
+    </div>
+    <a class="footer-link" href="privacy.html">Privacy policy</a>
+  </footer>
+
+  <dialog id="admin-month-details-dialog">
+    <div class="modal-head">
+      <h3 id="admin-month-details-title">Month details</h3>
+      <button type="button" class="x-btn" id="admin-month-details-close">×</button>
+    </div>
+    <div id="admin-month-details-body" class="history-list"></div>
+  </dialog>
+
+  <script src="auth-ui.js?v=20260401-4"></script>
+  <script src="admin.js?v=20260402-1"></script>
+</body>
+</html>

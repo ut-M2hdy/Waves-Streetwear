@@ -16,7 +16,7 @@ function mountProfileMenu(authBtn, user) {
   const panel = document.createElement("div");
   panel.className = "profile-menu-panel";
   panel.innerHTML = `
-    <a class="profile-menu-item" href="profile.html">Edit Profile</a>
+    <a class="profile-menu-item" href="/profile">Edit Profile</a>
     <button type="button" class="profile-menu-item" id="profile-logout-btn">Logout (${user.fullName})</button>
   `;
 
@@ -52,7 +52,7 @@ async function refreshAuthButtons() {
   } catch {
     removeProfileMenu(authBtn);
     authBtn.textContent = "Login";
-    authBtn.href = "auth.html";
+    authBtn.href = "/auth";
     if (adminBtn) adminBtn.classList.add("hidden");
     if (historyBtn) historyBtn.classList.add("hidden");
     if (profileBtn) profileBtn.classList.add("hidden");
@@ -60,20 +60,20 @@ async function refreshAuthButtons() {
   }
 
   if (!payload.user) {
-    const isHistoryPage = window.location.pathname.endsWith("/history.html") || window.location.pathname.endsWith("history.html");
-    const isProfilePage = window.location.pathname.endsWith("/profile.html") || window.location.pathname.endsWith("profile.html");
+    const isHistoryPage = window.location.pathname.endsWith("/history");
+    const isProfilePage = window.location.pathname.endsWith("/profile");
     if (isHistoryPage) {
-      window.location.href = "auth.html";
+      window.location.href = "/auth";
       return;
     }
     if (isProfilePage) {
-      window.location.href = "auth.html";
+      window.location.href = "/auth";
       return;
     }
 
     removeProfileMenu(authBtn);
     authBtn.textContent = "Login";
-    authBtn.href = "auth.html";
+    authBtn.href = "/auth";
     authBtn.onclick = null;
     if (adminBtn) adminBtn.classList.add("hidden");
     if (historyBtn) historyBtn.classList.add("hidden");

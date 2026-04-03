@@ -198,7 +198,7 @@ function scrollToShop() {
 
 function goToProduct(productId, colorCode) {
   const colorParam = colorCode ? `&color=${encodeURIComponent(colorCode)}` : "";
-  window.location.href = `product.html?id=${productId}${colorParam}`;
+  window.location.href = `/product?id=${productId}${colorParam}`;
 }
 
 function setWave(waveName) {

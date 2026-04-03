@@ -367,7 +367,7 @@ function renderRelated(currentProduct) {
       </div>
       <div class="desc">${item.desc}</div>
       <div class="btn-row">
-        <button class="btn primary" ${item.soldOut ? "disabled" : ""} onclick="window.location.href='product.html?id=${item.id}&color=${encodeURIComponent(normalizeProductColor(item, selectedColor))}'">${item.soldOut ? "Sold out" : "Buy now"}</button>
+        <button class="btn primary" ${item.soldOut ? "disabled" : ""} onclick="window.location.href='/product?id=${item.id}&color=${encodeURIComponent(normalizeProductColor(item, selectedColor))}'">${item.soldOut ? "Sold out" : "Buy now"}</button>
       </div>
     </article>
   `).join("");
@@ -386,7 +386,7 @@ function renderRelated(currentProduct) {
       const nextProduct = catalogProducts.find((item) => item.id === productId);
       if (!nextProduct || nextProduct.soldOut) return;
 
-      window.location.href = `product.html?id=${productId}&color=${productColor}`;
+      window.location.href = `/product?id=${productId}&color=${productColor}`;
     };
 
     card.addEventListener("click", (event) => {
@@ -463,7 +463,7 @@ orderForm.addEventListener("submit", async (event) => {
     fullName: String(fullName || ""),
     productName: String(product.name || "")
   });
-  window.location.href = `order-success.html?${successParams.toString()}`;
+  window.location.href = `/order-success?${successParams.toString()}`;
 });
 
 amountInput?.addEventListener("input", updateOrderTotals);

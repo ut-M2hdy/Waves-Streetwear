@@ -8,7 +8,7 @@ async function loadHistory() {
   const response = await fetch("/api/orders/my");
 
   if (response.status === 401) {
-    window.location.href = "auth.html";
+    window.location.href = "/auth";
     return;
   }
 

@@ -386,7 +386,7 @@ async function requireAdminPageAccess() {
   }
 
   if (!me.user) {
-    window.location.href = "auth.html";
+    window.location.href = "/auth";
     return false;
   }
   currentAdminId = Number(me.user.id || 0);

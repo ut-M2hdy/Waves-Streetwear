@@ -103,7 +103,7 @@ loginForm.addEventListener("submit", async (event) => {
       window.location.href = "/";
     }, 500);
   } catch (error) {
-    showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth.html");
+    showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth");
   }
 });
 
@@ -152,6 +152,6 @@ registerForm.addEventListener("submit", async (event) => {
       window.location.href = "/";
     }, 700);
   } catch (error) {
-    showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth.html");
+    showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth");
   }
 });

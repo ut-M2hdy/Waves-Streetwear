@@ -88,7 +88,7 @@ async function loadProfile() {
   try {
     const response = await fetch("/api/profile", { cache: "no-store" });
     if (response.status === 401) {
-      window.location.href = "auth.html";
+      window.location.href = "/auth";
       return;
     }
     const payload = await response.json();

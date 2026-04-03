@@ -100,7 +100,7 @@ loginForm.addEventListener("submit", async (event) => {
 
     showMessage("Logged in successfully.", true);
     setTimeout(() => {
-      window.location.href = "index.html";
+      window.location.href = "/";
     }, 500);
   } catch (error) {
     showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth.html");
@@ -149,7 +149,7 @@ registerForm.addEventListener("submit", async (event) => {
 
     showMessage("Account created and logged in.", true);
     setTimeout(() => {
-      window.location.href = "index.html";
+      window.location.href = "/";
     }, 700);
   } catch (error) {
     showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth.html");

@@ -757,9 +757,19 @@ async function loadOrders() {
     const deliveryOn = delivery > 0;
     const productImage = firstImagePath(o.product_image_url);
     const deliveredAtMs = o.delivered_at ? new Date(o.delivered_at).getTime() : null;
+    const cancelledAtMs = o.cancelled_at ? new Date(o.cancelled_at).getTime() : null;
     const deliveredLocked = String(o.status || "").toLowerCase() === "delivered"
       && Number.isFinite(deliveredAtMs)
       && (Date.now() - deliveredAtMs >= 24 * 60 * 60 * 1000);
+    const cancelledLocked = String(o.status || "").toLowerCase() === "cancelled"
+      && Number.isFinite(cancelledAtMs)
+      && (Date.now() - cancelledAtMs >= 24 * 60 * 60 * 1000);
+    const statusLocked = deliveredLocked || cancelledLocked;
+    const lockMessage = deliveredLocked
+      ? "Status locked: this order was delivered more than 24 hours ago."
+      : (cancelledLocked
+        ? "Status locked: this order was cancelled more than 24 hours ago."
+        : "");
     const isVerified = Number(o.contact_is_verified || 0) === 1;
     const isBlacklisted = Number(o.contact_is_blacklisted || 0) === 1;
     const accountSigns = [
@@ -814,12 +824,12 @@ async function loadOrders() {
               class="admin-status-btn status-${status} ${o.status === status ? "active" : ""}"
               data-id="${o.id}"
               data-status="${status}"
-              ${deliveredLocked ? "disabled" : ""}>
+              ${statusLocked ? "disabled" : ""}>
               ${status === "returned" ? "return" : status}
             </button>
           `).join("")}
         </div>
-        ${deliveredLocked ? '<div class="desc">Status locked: this order was delivered more than 24 hours ago.</div>' : ""}
+        ${statusLocked ? `<div class="desc">${lockMessage}</div>` : ""}
       </div>
     </article>
   `;

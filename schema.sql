@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS orders (
   note TEXT,
   status VARCHAR(40) DEFAULT 'pending',
   delivered_at DATETIME NULL,
+  cancelled_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id)
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS guest_profiles (
 -- If your table already exists, run this once to allow guest orders:
 -- ALTER TABLE orders MODIFY user_id INT UNSIGNED NULL;
 -- ALTER TABLE orders ADD COLUMN delivered_at DATETIME NULL AFTER status;
+-- ALTER TABLE orders ADD COLUMN cancelled_at DATETIME NULL AFTER delivered_at;
 -- ALTER TABLE users ADD COLUMN address TEXT NOT NULL AFTER phone;
 -- ALTER TABLE users ADD COLUMN is_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER role;
 -- ALTER TABLE users ADD COLUMN is_blacklisted TINYINT(1) NOT NULL DEFAULT 0 AFTER is_verified;

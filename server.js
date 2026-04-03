@@ -224,6 +224,21 @@ async function ensureOrdersDeliveredAtColumn() {
   }
 }
 
+async function ensureOrdersCancelledAtColumn() {
+  try {
+    const [rows] = await pool.query("SHOW COLUMNS FROM orders LIKE 'cancelled_at'");
+    if (!rows.length) {
+      await pool.query("ALTER TABLE orders ADD COLUMN cancelled_at DATETIME NULL AFTER delivered_at");
+    }
+
+    await pool.query(
+      "UPDATE orders SET cancelled_at = COALESCE(cancelled_at, created_at) WHERE status = 'cancelled'"
+    );
+  } catch {
+    // keep backward compatibility if orders table does not exist yet
+  }
+}
+
 function requireAuth(req, res, next) {
   if (!req.session.user) {
     return res.status(401).json({ message: "Please login first." });
@@ -639,10 +654,11 @@ app.get("/api/admin/summary", requireAdmin, async (_req, res) => {
 app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
   try {
     await ensureOrdersDeliveredAtColumn();
+    await ensureOrdersCancelledAtColumn();
     await ensureUsersFlagsColumns();
     await ensureGuestProfilesSchema();
     const [rows] = await pool.query(
-      `SELECT o.id, o.user_id, o.product_name, o.color, o.size, o.amount, o.unit_price_dt, o.delivery_fee_dt, o.total_price_dt, o.note, o.status, o.delivered_at, o.created_at,
+      `SELECT o.id, o.user_id, o.product_name, o.color, o.size, o.amount, o.unit_price_dt, o.delivery_fee_dt, o.total_price_dt, o.note, o.status, o.delivered_at, o.cancelled_at, o.created_at,
               o.full_name AS order_full_name, o.phone AS order_phone,
               p.image_url AS product_image_url,
               u.full_name AS account_name, u.phone AS account_phone,
@@ -713,6 +729,7 @@ app.get("/api/admin/sales/monthly/:month", requireAdmin, async (req, res) => {
 app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   try {
     await ensureOrdersDeliveredAtColumn();
+    await ensureOrdersCancelledAtColumn();
 
     const id = Number(req.params.id);
     const requestedStatus = String(req.body?.status || "").trim().toLowerCase();
@@ -726,7 +743,7 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      "SELECT status, delivered_at FROM orders WHERE id = ? LIMIT 1",
+      "SELECT status, delivered_at, cancelled_at FROM orders WHERE id = ? LIMIT 1",
       [id]
     );
     if (!rows.length) {
@@ -735,13 +752,23 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
 
     const currentStatus = String(rows[0].status || "").trim().toLowerCase();
     const deliveredAt = rows[0].delivered_at ? new Date(rows[0].delivered_at) : null;
+    const cancelledAt = rows[0].cancelled_at ? new Date(rows[0].cancelled_at) : null;
     const isDeliveredLocked = currentStatus === "delivered"
       && deliveredAt
       && (Date.now() - deliveredAt.getTime() >= 24 * 60 * 60 * 1000);
+    const isCancelledLocked = currentStatus === "cancelled"
+      && cancelledAt
+      && (Date.now() - cancelledAt.getTime() >= 24 * 60 * 60 * 1000);
 
     if (isDeliveredLocked && requestedStatus !== "delivered") {
       return res.status(400).json({
         message: "Delivered status is locked after 24 hours and cannot be changed."
+      });
+    }
+
+    if (isCancelledLocked && requestedStatus !== "cancelled") {
+      return res.status(400).json({
+        message: "Cancelled status is locked after 24 hours and cannot be changed."
       });
     }
 
@@ -750,9 +777,11 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
     }
 
     if (requestedStatus === "delivered") {
-      await pool.query("UPDATE orders SET status = ?, delivered_at = NOW() WHERE id = ?", [requestedStatus, id]);
+      await pool.query("UPDATE orders SET status = ?, delivered_at = NOW(), cancelled_at = NULL WHERE id = ?", [requestedStatus, id]);
+    } else if (requestedStatus === "cancelled") {
+      await pool.query("UPDATE orders SET status = ?, delivered_at = NULL, cancelled_at = NOW() WHERE id = ?", [requestedStatus, id]);
     } else {
-      await pool.query("UPDATE orders SET status = ?, delivered_at = NULL WHERE id = ?", [requestedStatus, id]);
+      await pool.query("UPDATE orders SET status = ?, delivered_at = NULL, cancelled_at = NULL WHERE id = ?", [requestedStatus, id]);
     }
 
     res.json({ ok: true });

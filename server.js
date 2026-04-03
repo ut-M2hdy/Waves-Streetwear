@@ -11,6 +11,22 @@ const PORT = Number(process.env.PORT || 3000);
 const DEFAULT_DELIVERY_FEE_DT = Number(process.env.DEFAULT_DELIVERY_FEE_DT || 9);
 const SEWING_COST_DT = Number(process.env.SEWING_COST_DT || 35);
 
+function getDbSslConfig() {
+  const sslRequired = ["1", "true", "yes", "required"].includes(String(process.env.DB_SSL_REQUIRED || "").toLowerCase());
+  if (!sslRequired) return undefined;
+
+  const rejectUnauthorized = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || "false").toLowerCase() === "true";
+  const caRaw = String(process.env.DB_SSL_CA || "").trim();
+  if (caRaw) {
+    return {
+      ca: caRaw.replace(/\\n/g, "\n"),
+      rejectUnauthorized
+    };
+  }
+
+  return { rejectUnauthorized };
+}
+
 app.set("trust proxy", 1);
 
 const pool = mysql.createPool({
@@ -19,6 +35,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "store_waves",
+  ssl: getDbSslConfig(),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

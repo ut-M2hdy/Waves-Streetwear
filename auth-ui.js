@@ -38,6 +38,43 @@ function mountProfileMenu(authBtn, user) {
   });
 }
 
+function setAdminPendingBadge(adminBtn, pendingCount) {
+  if (!adminBtn) return;
+
+  let badge = adminBtn.querySelector(".header-notification-badge");
+  const nextCount = Number(pendingCount || 0);
+
+  if (!nextCount) {
+    badge?.remove();
+    return;
+  }
+
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "header-notification-badge";
+    adminBtn.appendChild(badge);
+  }
+
+  badge.textContent = nextCount > 99 ? "99+" : String(nextCount);
+}
+
+async function refreshAdminPendingBadge(adminBtn) {
+  if (!adminBtn) return;
+
+  try {
+    const response = await fetch("/api/admin/summary", { cache: "no-store" });
+    if (!response.ok) {
+      setAdminPendingBadge(adminBtn, 0);
+      return;
+    }
+
+    const payload = await response.json();
+    setAdminPendingBadge(adminBtn, payload.pendingCount || 0);
+  } catch {
+    setAdminPendingBadge(adminBtn, 0);
+  }
+}
+
 async function refreshAuthButtons() {
   const authBtn = document.getElementById("auth-btn");
   const adminBtn = document.getElementById("admin-btn");
@@ -91,8 +128,10 @@ async function refreshAuthButtons() {
   if (adminBtn) {
     if (payload.user.role === "admin") {
       adminBtn.classList.remove("hidden");
+      refreshAdminPendingBadge(adminBtn);
     } else {
       adminBtn.classList.add("hidden");
+      setAdminPendingBadge(adminBtn, 0);
     }
   }
 

@@ -225,6 +225,7 @@ function setWave(waveName) {
 }
 
 waveTabs.forEach((tab) => {
+  if (tab.disabled) return;
   tab.addEventListener("click", () => setWave(tab.dataset.wave));
 });
 

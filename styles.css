@@ -143,6 +143,30 @@ header {
   border: none;
   color: #0b1220;
 }
+.wave-tab.wave-tab-disabled {
+  opacity: 0.78;
+  cursor: not-allowed;
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+  transform: none;
+}
+.wave-tab.wave-tab-disabled:hover {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.3);
+  transform: none;
+}
+.wave-soon-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: rgba(250, 204, 21, 0.22);
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  color: #fef08a;
+}
 .logo {
   display: flex;
   align-items: center;

@@ -19,8 +19,20 @@ function getProductById(productId) {
 }
 
 async function loadCatalogFromDatabase() {
+  // Render local fallback immediately so first wave is visible even if API is slow.
+  renderProducts();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
   try {
-    const response = await fetch("/api/products", { cache: "no-store" });
+    const response = await fetch("/api/products", {
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       renderProducts();
       return;
@@ -53,6 +65,7 @@ async function loadCatalogFromDatabase() {
       };
     });
   } catch {
+    clearTimeout(timeoutId);
     catalogProducts = [...products];
   }
 

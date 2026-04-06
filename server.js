@@ -403,6 +403,13 @@ function isValidMonthKey(value) {
 }
 
 app.get("/api/health", (_req, res) => {
+  if (!isDatabaseConnected) {
+    return res.status(503).json({
+      ok: false,
+      message: "The website is down for maintenance, comeback later."
+    });
+  }
+
   res.json({ ok: true });
 });
 

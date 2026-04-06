@@ -676,7 +676,7 @@ async function loadProducts() {
       </label>
       <label>Wave
         <select name="wave" required>
-          <option value="1stDrop" ${String(p.wave) === "1stDrop" ? "selected" : ""}>1stDrop</option>
+          <option value="1stDrop" ${String(p.wave) === "1stDrop" ? "selected" : ""}>Cold Nights Drop</option>
           <option value="CAIROKEE" ${String(p.wave) === "CAIROKEE" ? "selected" : ""}>CAIROKEE</option>
           <option value="LEMHAF" ${String(p.wave) === "LEMHAF" ? "selected" : ""}>LEMHAF</option>
           <option value="UPSIDE DOWN" ${String(p.wave) === "UPSIDE DOWN" ? "selected" : ""}>UPSIDE DOWN</option>

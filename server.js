@@ -788,7 +788,7 @@ app.get("/api/admin/summary", requireAdmin, async (_req, res) => {
     await autoVerifyDeliveredContacts();
     const [[ordersCountRow]] = await pool.query("SELECT COUNT(*) AS count FROM orders WHERE status NOT IN ('cancelled', 'returned')");
     const [[pendingRow]] = await pool.query("SELECT COUNT(*) AS count FROM orders WHERE status = 'pending'");
-    const [[salesRow]] = await pool.query("SELECT COALESCE(SUM(unit_price_dt * amount), 0) AS total FROM orders WHERE status NOT IN ('cancelled', 'returned')");
+    const [[salesRow]] = await pool.query("SELECT COALESCE(SUM(unit_price_dt * amount), 0) AS total FROM orders WHERE status = 'delivered'");
 
     res.json({
       ordersCount: Number(ordersCountRow.count || 0),

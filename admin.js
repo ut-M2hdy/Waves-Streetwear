@@ -850,11 +850,6 @@ function isOlderSellOrder(order) {
     return Number.isFinite(returnedAtMs) && (Date.now() - returnedAtMs >= ONE_DAY_MS);
   }
 
-  if (status === "confirmed") {
-    const createdAtMs = toTimeMs(order?.created_at);
-    return Number.isFinite(createdAtMs) && (Date.now() - createdAtMs >= ONE_DAY_MS);
-  }
-
   if (status === "cancelled") {
     const cancelledAtMs = toTimeMs(order?.cancelled_at) ?? toTimeMs(order?.created_at);
     return Number.isFinite(cancelledAtMs) && (Date.now() - cancelledAtMs >= ONE_DAY_MS);

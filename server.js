@@ -1013,7 +1013,7 @@ app.get("/api/admin/users", requireAdmin, async (_req, res) => {
     await autoVerifyDeliveredContacts();
     await ensureUsersFlagsColumns();
     const [rows] = await pool.query(
-      `SELECT u.id, u.full_name, u.phone, u.role, u.is_verified, u.is_blacklisted, u.created_at,
+      `SELECT u.id, u.full_name, u.phone, u.address, u.role, u.is_verified, u.is_blacklisted, u.created_at,
               (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) AS orders_count
        FROM users u
        ORDER BY u.id DESC`

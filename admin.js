@@ -1183,6 +1183,7 @@ function renderUsersList() {
         <div class="price">${u.role}</div>
       </div>
       <div class="desc">Phone: ${u.phone}</div>
+      <div class="desc">Address: ${u.address || "-"}</div>
       <div class="desc">Orders bought: <strong>${Number(u.orders_count || 0)}</strong></div>
       <div class="desc">Created: ${new Date(u.created_at).toLocaleString()}</div>
       <div class="desc">

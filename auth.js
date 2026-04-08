@@ -58,9 +58,13 @@ function renderMaintenancePage() {
 async function enforceMaintenanceMode() {
   try {
     const response = await fetch("/api/health", { cache: "no-store" });
-    if (!response.ok) {
+    if (response.status === 503) {
       renderMaintenancePage();
       return true;
+    }
+
+    if (!response.ok) {
+      return false;
     }
 
     const payload = await response.json().catch(() => ({}));
@@ -69,8 +73,7 @@ async function enforceMaintenanceMode() {
       return true;
     }
   } catch {
-    renderMaintenancePage();
-    return true;
+    return false;
   }
 
   return false;

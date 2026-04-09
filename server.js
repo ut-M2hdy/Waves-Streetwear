@@ -1224,6 +1224,7 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
     });
 
     const adjustmentEntries = adjustmentRows.map((row) => ({
+      id: Number(row.id),
       kind: "adjustment",
       title: row.title,
       amountDt: Number(Number(row.amount_dt || 0).toFixed(2)),
@@ -1366,6 +1367,7 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
     });
 
     const adjustmentEntries = adjustmentRows.map((row) => ({
+      id: Number(row.id),
       kind: "adjustment",
       title: row.title,
       amountDt: Number(Number(row.amount_dt || 0).toFixed(2)),
@@ -1426,6 +1428,32 @@ app.post("/api/admin/revenues/adjustments", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not save revenue action." });
+  }
+});
+
+app.delete("/api/admin/revenues/adjustments/:id", requireAdmin, async (req, res) => {
+  try {
+    await ensureRevenueAdjustmentsSchema();
+
+    const adjustmentId = Number(req.params.id);
+    if (!adjustmentId) {
+      return res.status(400).json({ message: "Revenue action id is required." });
+    }
+
+    const [existingRows] = await pool.query(
+      "SELECT id FROM revenue_adjustments WHERE id = ? LIMIT 1",
+      [adjustmentId]
+    );
+
+    if (!existingRows.length) {
+      return res.status(404).json({ message: "Revenue action not found." });
+    }
+
+    await pool.query("DELETE FROM revenue_adjustments WHERE id = ?", [adjustmentId]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not delete revenue action." });
   }
 });
 

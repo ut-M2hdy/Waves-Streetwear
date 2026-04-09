@@ -1164,8 +1164,41 @@ async function loadRevenues() {
       </div>
       <div class="desc">Type: <strong class="revenue-type ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">${entry.kind === "sale_add" ? "Sale +" : entry.kind === "sewing_remove" ? "Sewing -" : "Manual action"}</strong></div>
       <div class="desc">Date: ${new Date(entry.created_at).toLocaleString()}</div>
+      ${entry.kind === "adjustment" && Number(entry.id) > 0
+        ? `<div class="btn-row"><button type="button" class="btn admin-revenue-delete-btn" data-adjustment-id="${Number(entry.id)}">Remove action</button></div>`
+        : ""}
     </article>
   `).join("");
+
+  revenuesEl.querySelectorAll(".admin-revenue-delete-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const adjustmentId = Number(button.dataset.adjustmentId || 0);
+      if (!adjustmentId) return;
+
+      if (!window.confirm("Delete this revenue action?")) return;
+
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/admin/revenues/adjustments/${adjustmentId}`, {
+          method: "DELETE"
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showMessage(payload.message || "Could not delete revenue action.");
+          button.disabled = false;
+          return;
+        }
+
+        showMessage("Revenue action removed.", true);
+        await loadRevenues();
+        await loadMonthlyRevenuesOverview();
+      } catch {
+        showMessage("Could not delete revenue action. Server/network error.");
+        button.disabled = false;
+      }
+    });
+  });
 }
 
 async function loadUsers() {

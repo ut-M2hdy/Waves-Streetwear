@@ -24,6 +24,17 @@ const adminNavButtons = document.querySelectorAll(".admin-nav-btn");
 const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned", "cancelled"];
 const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey"];
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// Check DB health - returns true if available, false if unavailable
+async function checkDBHealth() {
+  try {
+    const response = await fetch("/api/health", { cache: "no-store" });
+    return response.status !== 503;
+  } catch {
+    return true; // Assume available on network errors, let API handle it
+  }
+}
+
 let availableImageFiles = [];
 let currentAdminId = null;
 let allUsersCache = [];
@@ -645,6 +656,13 @@ async function loadMonthlyRevenuesOverview() {
 }
 
 async function loadProducts() {
+  // Check DB health before loading
+  const isDBAvailable = await checkDBHealth();
+  if (!isDBAvailable) {
+    showSectionError(productsEl, "Database is under maintenance. Please try again shortly.");
+    return;
+  }
+
   let response;
   try {
     response = await fetch("/api/admin/products");
@@ -737,6 +755,13 @@ async function loadProducts() {
 }
 
 async function loadOrders() {
+  // Check DB health before loading
+  const isDBAvailable = await checkDBHealth();
+  if (!isDBAvailable) {
+    showSectionError(ordersEl, "Database is under maintenance. Please try again shortly.");
+    return;
+  }
+
   let response;
   try {
     response = await fetch("/api/admin/orders", { cache: "no-store" });
@@ -1144,6 +1169,13 @@ async function loadRevenues() {
 }
 
 async function loadUsers() {
+  // Check DB health before loading
+  const isDBAvailable = await checkDBHealth();
+  if (!isDBAvailable) {
+    showSectionError(usersEl, "Database is under maintenance. Please try again shortly.");
+    return;
+  }
+
   let response;
   try {
     response = await fetch("/api/admin/users");
@@ -1303,6 +1335,13 @@ function renderUsersList() {
 
 async function loadNotUsers() {
   if (!notUsersEl) return;
+
+  // Check DB health before loading
+  const isDBAvailable = await checkDBHealth();
+  if (!isDBAvailable) {
+    showSectionError(notUsersEl, "Database is under maintenance. Please try again shortly.");
+    return;
+  }
 
   let response;
   try {

@@ -55,28 +55,30 @@ function renderMaintenancePage() {
   document.close();
 }
 
-async function enforceMaintenanceMode() {
+// Check DB health and show maintenance if unavailable
+// Returns true if DB is available, false if unavailable (will show maintenance)
+async function checkDBHealth() {
   try {
     const response = await fetch("/api/health", { cache: "no-store" });
     if (response.status === 503) {
       renderMaintenancePage();
-      return true;
+      return false;
     }
 
     if (!response.ok) {
-      return false;
+      return true; // Assume available on non-503 errors
     }
 
     const payload = await response.json().catch(() => ({}));
     if (payload?.ok === false) {
       renderMaintenancePage();
-      return true;
+      return false;
     }
   } catch {
-    return false;
+    return true; // Assume available on network errors
   }
 
-  return false;
+  return true;
 }
 
 function removeProfileMenu(authBtn) {
@@ -220,7 +222,5 @@ async function refreshAuthButtons() {
 }
 
 (async () => {
-  const inMaintenance = await enforceMaintenanceMode();
-  if (inMaintenance) return;
   refreshAuthButtons();
 })();

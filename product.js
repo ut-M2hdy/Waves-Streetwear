@@ -21,6 +21,16 @@ const deliveryFeeEl = document.getElementById("delivery-fee");
 const orderTotalEl = document.getElementById("order-total");
 const DEFAULT_DELIVERY_FEE = 9;
 
+// Check DB health - returns true if available, false if unavailable
+async function checkDBHealth() {
+  try {
+    const response = await fetch("/api/health", { cache: "no-store" });
+    return response.status !== 503;
+  } catch {
+    return true; // Assume available on network errors, let API handle it
+  }
+}
+
 let catalogProducts = [...products];
 let product = null;
 let selectedColor = "W";
@@ -405,6 +415,16 @@ function renderRelated(currentProduct) {
 orderForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!product) return;
+
+  // Check DB health before submitting order
+  const isDBAvailable = await checkDBHealth();
+  if (!isDBAvailable) {
+    orderConfirmation.textContent = "The website is under maintenance. Please try again shortly.";
+    orderConfirmation.style.display = "block";
+    orderConfirmation.style.color = "#b91c1c";
+    return;
+  }
+
   const data = new FormData(orderForm);
   const size = data.get("size");
   const amount = Number(data.get("amount") || 1);

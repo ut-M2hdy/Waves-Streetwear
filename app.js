@@ -5,6 +5,16 @@ let activeWave = "1stDrop";
 const selectedColors = new Map();
 let catalogProducts = [...products];
 
+// Check DB health - returns true if available, false if unavailable
+async function checkDBHealth() {
+  try {
+    const response = await fetch("/api/health", { cache: "no-store" });
+    return response.status !== 503;
+  } catch {
+    return true; // Assume available on network errors, let API handle it
+  }
+}
+
 function parseProductColors(row, fallbackColors = ["W"]) {
   const allowed = new Set(["B", "W", "Br", "P", "Grey"]);
   const parsed = String(row?.colors_csv || "")
@@ -170,8 +180,15 @@ function renderProducts() {
   });
 
   shop.querySelectorAll(".buy-btn").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       if (button.disabled) return;
+
+      // Check DB health before navigating to product page
+      const isDBAvailable = await checkDBHealth();
+      if (!isDBAvailable) {
+        alert("The database is under maintenance. Please try again shortly.");
+        return;
+      }
 
       const productId = Number(button.dataset.productId);
       const product = getProductById(productId);

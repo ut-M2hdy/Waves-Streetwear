@@ -27,6 +27,7 @@
         <button type="button" class="admin-nav-btn" data-target="section-products">Edit Products</button>
         <button type="button" class="admin-nav-btn" data-target="section-sells">Sells List</button>
         <button type="button" class="admin-nav-btn" data-target="section-revenues">Revenues</button>
+        <button type="button" class="admin-nav-btn" data-target="section-deleted-revenues">Deleted actions</button>
         <button type="button" class="admin-nav-btn" data-target="section-users">Users & Roles</button>
         <button type="button" class="admin-nav-btn" data-target="section-not-users">Not Users</button>
       </div>
@@ -98,10 +99,6 @@
         </aside>
         <div class="admin-revenues-main">
           <p class="desc">Current month only. Each new month starts from 0. Old months stay in Monthly revenues fiche.</p>
-          <div class="admin-revenue-tools">
-            <button type="button" class="btn" id="admin-deleted-revenues-btn">Deleted actions</button>
-          </div>
-          <div id="admin-deleted-revenues" class="history-list hidden"></div>
           <form id="admin-revenue-adjust-form" class="order-form admin-revenue-form">
             <label>Action title
               <input name="title" required placeholder="Bought boxes">
@@ -120,6 +117,12 @@
           <div id="admin-revenues" class="history-list"></div>
         </div>
       </div>
+    </section>
+
+    <section class="order-card admin-section" id="section-deleted-revenues">
+      <h2>Deleted actions</h2>
+      <p class="desc">This list shows removed manual revenue actions.</p>
+      <div id="admin-deleted-revenues" class="history-list"></div>
     </section>
 
     <section class="order-card admin-section" id="section-users">
@@ -162,6 +165,6 @@
   </dialog>
 
   <script src="auth-ui.js?v=20260409-12"></script>
-  <script src="admin.js?v=20260409-15"></script>
+  <script src="admin.js?v=20260409-16"></script>
 </body>
 </html>

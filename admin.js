@@ -11,7 +11,6 @@ const usersSearchInput = document.getElementById("admin-users-search");
 const notUsersSearchInput = document.getElementById("admin-not-users-search");
 const revenuesEl = document.getElementById("admin-revenues");
 const deletedRevenuesEl = document.getElementById("admin-deleted-revenues");
-const deletedRevenuesBtn = document.getElementById("admin-deleted-revenues-btn");
 const monthlySalesEl = document.getElementById("admin-monthly-sales");
 const monthlyRevenuesEl = document.getElementById("admin-monthly-revenues");
 const revenueAdjustForm = document.getElementById("admin-revenue-adjust-form");
@@ -422,6 +421,7 @@ async function requireAdminPageAccess() {
     document.getElementById("section-products")?.classList.add("hidden");
     document.getElementById("section-sells")?.classList.add("hidden");
     document.getElementById("section-revenues")?.classList.add("hidden");
+    document.getElementById("section-deleted-revenues")?.classList.add("hidden");
     document.getElementById("section-users")?.classList.add("hidden");
     document.getElementById("section-not-users")?.classList.add("hidden");
     adminNavButtons.forEach((btn) => {
@@ -447,8 +447,12 @@ function showAdminSection(sectionId) {
 }
 
 adminNavButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async () => {
     showAdminSection(btn.dataset.target);
+
+    if (btn.dataset.target === "section-deleted-revenues") {
+      await loadDeletedRevenues();
+    }
   });
 });
 
@@ -1635,20 +1639,6 @@ revenueAdjustForm?.addEventListener("submit", async (event) => {
   }
 });
 
-deletedRevenuesBtn?.addEventListener("click", async () => {
-  if (!deletedRevenuesEl) return;
-
-  const isHidden = deletedRevenuesEl.classList.contains("hidden");
-  if (isHidden) {
-    await loadDeletedRevenues();
-    deletedRevenuesEl.classList.remove("hidden");
-    deletedRevenuesBtn.textContent = "Hide deleted actions";
-  } else {
-    deletedRevenuesEl.classList.add("hidden");
-    deletedRevenuesBtn.textContent = "Deleted actions";
-  }
-});
-
 (async () => {
   const allowed = await requireAdminPageAccess();
   if (!allowed) return;
@@ -1664,6 +1654,7 @@ deletedRevenuesBtn?.addEventListener("click", async () => {
     loadUsers(),
     loadNotUsers(),
     loadRevenues(),
+    loadDeletedRevenues(),
     loadMonthlyRevenuesOverview()
   ]);
 })();

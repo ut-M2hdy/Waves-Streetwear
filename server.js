@@ -300,6 +300,26 @@ async function ensureRevenueAdjustmentsSchema() {
   );
 }
 
+async function ensureRevenueAdjustmentsDeletedSchema() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS revenue_adjustments_deleted (
+      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+      original_adjustment_id INT UNSIGNED NULL,
+      title VARCHAR(180) NOT NULL,
+      amount_dt DECIMAL(10,2) NOT NULL,
+      created_by_user_id INT UNSIGNED NULL,
+      created_at DATETIME NULL,
+      deleted_by_user_id INT UNSIGNED NULL,
+      deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_revenue_deleted_original_id (original_adjustment_id),
+      KEY idx_revenue_deleted_deleted_at (deleted_at),
+      CONSTRAINT fk_revenue_deleted_created_user FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+      CONSTRAINT fk_revenue_deleted_deleted_user FOREIGN KEY (deleted_by_user_id) REFERENCES users(id)
+    ) ENGINE=InnoDB`
+  );
+}
+
 async function ensureOrdersDeliveredAtColumn() {
   try {
     const [rows] = await pool.query("SHOW COLUMNS FROM orders LIKE 'delivered_at'");
@@ -1431,9 +1451,45 @@ app.post("/api/admin/revenues/adjustments", requireAdmin, async (req, res) => {
   }
 });
 
+app.get("/api/admin/revenues/adjustments/deleted", requireAdmin, async (_req, res) => {
+  try {
+    await ensureRevenueAdjustmentsDeletedSchema();
+
+    const [rows] = await pool.query(
+      `SELECT d.id,
+              d.original_adjustment_id,
+              d.title,
+              d.amount_dt,
+              d.created_at,
+              d.deleted_at,
+              u.full_name AS deleted_by_name
+       FROM revenue_adjustments_deleted d
+       LEFT JOIN users u ON u.id = d.deleted_by_user_id
+       ORDER BY d.deleted_at DESC, d.id DESC
+       LIMIT 250`
+    );
+
+    const actions = (rows || []).map((row) => ({
+      id: Number(row.id),
+      originalAdjustmentId: row.original_adjustment_id != null ? Number(row.original_adjustment_id) : null,
+      title: row.title,
+      amountDt: Number(Number(row.amount_dt || 0).toFixed(2)),
+      created_at: row.created_at,
+      deleted_at: row.deleted_at,
+      deletedByName: row.deleted_by_name || null
+    }));
+
+    res.json({ actions });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not load deleted revenue actions." });
+  }
+});
+
 app.delete("/api/admin/revenues/adjustments/:id", requireAdmin, async (req, res) => {
   try {
     await ensureRevenueAdjustmentsSchema();
+    await ensureRevenueAdjustmentsDeletedSchema();
 
     const adjustmentId = Number(req.params.id);
     if (!adjustmentId) {
@@ -1441,13 +1497,29 @@ app.delete("/api/admin/revenues/adjustments/:id", requireAdmin, async (req, res)
     }
 
     const [existingRows] = await pool.query(
-      "SELECT id FROM revenue_adjustments WHERE id = ? LIMIT 1",
+      "SELECT id, title, amount_dt, created_by_user_id, created_at FROM revenue_adjustments WHERE id = ? LIMIT 1",
       [adjustmentId]
     );
 
     if (!existingRows.length) {
       return res.status(404).json({ message: "Revenue action not found." });
     }
+
+    const row = existingRows[0];
+
+    await pool.query(
+      `INSERT INTO revenue_adjustments_deleted
+       (original_adjustment_id, title, amount_dt, created_by_user_id, created_at, deleted_by_user_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        Number(row.id),
+        String(row.title || ""),
+        Number(Number(row.amount_dt || 0).toFixed(2)),
+        row.created_by_user_id ? Number(row.created_by_user_id) : null,
+        row.created_at || null,
+        req.session.user?.id ? Number(req.session.user.id) : null
+      ]
+    );
 
     await pool.query("DELETE FROM revenue_adjustments WHERE id = ?", [adjustmentId]);
     res.json({ ok: true });

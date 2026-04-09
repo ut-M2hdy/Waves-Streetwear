@@ -927,6 +927,14 @@ textarea { resize: vertical; min-height: 70px; }
 .admin-revenues-main {
   min-width: 0;
 }
+.admin-revenue-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: 4px 0 10px;
+}
+#admin-deleted-revenues {
+  margin-bottom: 12px;
+}
 .admin-revenue-form {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

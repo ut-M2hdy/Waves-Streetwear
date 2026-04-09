@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel | WAVES</title>
-  <link rel="stylesheet" href="styles.css?v=20260409-7">
+  <link rel="stylesheet" href="styles.css?v=20260409-8">
   <link rel="icon" type="image/x-icon" href="img/logo_waves_TRANS.ico">
 </head>
 <body>
@@ -98,6 +98,10 @@
         </aside>
         <div class="admin-revenues-main">
           <p class="desc">Current month only. Each new month starts from 0. Old months stay in Monthly revenues fiche.</p>
+          <div class="admin-revenue-tools">
+            <button type="button" class="btn" id="admin-deleted-revenues-btn">Deleted actions</button>
+          </div>
+          <div id="admin-deleted-revenues" class="history-list hidden"></div>
           <form id="admin-revenue-adjust-form" class="order-form admin-revenue-form">
             <label>Action title
               <input name="title" required placeholder="Bought boxes">
@@ -158,6 +162,6 @@
   </dialog>
 
   <script src="auth-ui.js?v=20260409-12"></script>
-  <script src="admin.js?v=20260409-14"></script>
+  <script src="admin.js?v=20260409-15"></script>
 </body>
 </html>

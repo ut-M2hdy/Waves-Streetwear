@@ -10,6 +10,8 @@ const notUsersEl = document.getElementById("admin-not-users");
 const usersSearchInput = document.getElementById("admin-users-search");
 const notUsersSearchInput = document.getElementById("admin-not-users-search");
 const revenuesEl = document.getElementById("admin-revenues");
+const deletedRevenuesEl = document.getElementById("admin-deleted-revenues");
+const deletedRevenuesBtn = document.getElementById("admin-deleted-revenues-btn");
 const monthlySalesEl = document.getElementById("admin-monthly-sales");
 const monthlyRevenuesEl = document.getElementById("admin-monthly-revenues");
 const revenueAdjustForm = document.getElementById("admin-revenue-adjust-form");
@@ -1201,6 +1203,44 @@ async function loadRevenues() {
   });
 }
 
+async function loadDeletedRevenues() {
+  if (!deletedRevenuesEl) return;
+
+  let response;
+  try {
+    response = await fetch("/api/admin/revenues/adjustments/deleted", { cache: "no-store" });
+  } catch {
+    showSectionError(deletedRevenuesEl, "Server not reachable. Start backend first.");
+    return;
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    showSectionError(deletedRevenuesEl, payload.message || "Could not load deleted actions.");
+    return;
+  }
+
+  const payload = await response.json();
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+
+  if (!actions.length) {
+    deletedRevenuesEl.innerHTML = '<p class="desc">No deleted actions yet.</p>';
+    return;
+  }
+
+  deletedRevenuesEl.innerHTML = actions.map((entry) => `
+    <article class="history-item revenue-item ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">
+      <div class="meta">
+        <div class="name">${entry.title}</div>
+        <div class="price revenue-amount ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">${formatPlainDt(entry.amountDt)}</div>
+      </div>
+      <div class="desc">Deleted by: <strong>${entry.deletedByName || "Unknown"}</strong></div>
+      <div class="desc">Deleted at: ${entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : "-"}</div>
+      <div class="desc">Original date: ${entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}</div>
+    </article>
+  `).join("");
+}
+
 async function loadUsers() {
   // Check DB health before loading
   const isDBAvailable = await checkDBHealth();
@@ -1592,6 +1632,20 @@ revenueAdjustForm?.addEventListener("submit", async (event) => {
     await loadMonthlyRevenuesOverview();
   } catch {
     showMessage("Could not save revenue action. Server/network error.");
+  }
+});
+
+deletedRevenuesBtn?.addEventListener("click", async () => {
+  if (!deletedRevenuesEl) return;
+
+  const isHidden = deletedRevenuesEl.classList.contains("hidden");
+  if (isHidden) {
+    await loadDeletedRevenues();
+    deletedRevenuesEl.classList.remove("hidden");
+    deletedRevenuesBtn.textContent = "Hide deleted actions";
+  } else {
+    deletedRevenuesEl.classList.add("hidden");
+    deletedRevenuesBtn.textContent = "Deleted actions";
   }
 });
 

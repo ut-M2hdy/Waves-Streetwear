@@ -31,7 +31,7 @@ async function checkDBHealth() {
   }
 }
 
-let catalogProducts = [...products];
+let catalogProducts = [];
 let product = null;
 let selectedColor = "W";
 
@@ -134,20 +134,17 @@ function showNotFound() {
 }
 
 function hydrateCatalogFromDbRows(rows) {
-  const baseById = new Map(products.map((item) => [item.id, { ...item }]));
   return rows.map((row) => {
-    const base = baseById.get(Number(row.id));
-    const parsedColors = parseProductColors(row, Array.isArray(base?.colors) && base.colors.length ? base.colors : ["W"]);
+    const parsedColors = parseProductColors(row, ["W"]);
     const normalizedMainColor = parsedColors.includes(row.main_color) ? row.main_color : parsedColors[0];
     return {
-      ...(base || {}),
       id: Number(row.id),
       name: row.name,
       price: Number(row.price_cents || 0) / 100,
-      desc: row.description || base?.desc || "",
-      imageUrl: row.image_url || base?.imageUrl || "",
-      colorImagesMap: row.color_images_map || base?.colorImagesMap || "",
-      wave: String(row.wave || base?.wave || "1stDrop"),
+      desc: row.description || "",
+      imageUrl: row.image_url || "",
+      colorImagesMap: row.color_images_map || "",
+      wave: String(row.wave || "1stDrop"),
       colors: parsedColors,
       mainColor: normalizedMainColor,
       soldOut: Number(row.sold_out || 0) === 1
@@ -165,7 +162,7 @@ async function initProductPage() {
       }
     }
   } catch {
-    // keep static fallback
+    catalogProducts = [];
   }
 
   product = catalogProducts.find((item) => item.id === productId) || null;

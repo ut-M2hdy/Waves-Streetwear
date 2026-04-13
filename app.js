@@ -3,7 +3,7 @@ const waveTabs = document.querySelectorAll(".wave-tab");
 
 let activeWave = "1stDrop";
 const selectedColors = new Map();
-let catalogProducts = [...products];
+let catalogProducts = [];
 
 // Check DB health - returns true if available, false if unavailable
 async function checkDBHealth() {
@@ -29,9 +29,6 @@ function getProductById(productId) {
 }
 
 async function loadCatalogFromDatabase() {
-  // Render local fallback immediately so first wave is visible even if API is slow.
-  renderProducts();
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 6000);
 
@@ -43,32 +40,23 @@ async function loadCatalogFromDatabase() {
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      renderProducts();
-      return;
-    }
+    if (!response.ok) return;
 
     const payload = await response.json();
     const dbProducts = payload.products || [];
-    if (!Array.isArray(dbProducts) || !dbProducts.length) {
-      renderProducts();
-      return;
-    }
+    if (!Array.isArray(dbProducts) || !dbProducts.length) return;
 
-    const baseById = new Map(products.map((item) => [item.id, { ...item }]));
     catalogProducts = dbProducts.map((row) => {
-      const base = baseById.get(Number(row.id));
-      const parsedColors = parseProductColors(row, Array.isArray(base?.colors) && base.colors.length ? base.colors : ["W"]);
+      const parsedColors = parseProductColors(row, ["W"]);
       const normalizedMainColor = parsedColors.includes(row.main_color) ? row.main_color : parsedColors[0];
       return {
-        ...(base || {}),
         id: Number(row.id),
         name: row.name,
         price: Number(row.price_cents || 0) / 100,
-        desc: row.description || base?.desc || "",
-        imageUrl: row.image_url || base?.imageUrl || "",
-        colorImagesMap: row.color_images_map || base?.colorImagesMap || "",
-        wave: String(row.wave || base?.wave || "1stDrop"),
+        desc: row.description || "",
+        imageUrl: row.image_url || "",
+        colorImagesMap: row.color_images_map || "",
+        wave: String(row.wave || "1stDrop"),
         colors: parsedColors,
         mainColor: normalizedMainColor,
         soldOut: Number(row.sold_out || 0) === 1
@@ -76,7 +64,7 @@ async function loadCatalogFromDatabase() {
     });
   } catch {
     clearTimeout(timeoutId);
-    catalogProducts = [...products];
+    catalogProducts = [];
   }
 
   renderProducts();

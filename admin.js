@@ -944,23 +944,29 @@ function renderOrdersMarkup(orders) {
       isVerified ? '<span class="admin-user-sign sign-verified">Verified</span>' : "",
       isBlacklisted ? '<span class="admin-user-sign sign-blacklisted">Blacklisted</span>' : ""
     ].filter(Boolean).join(" ");
-    const buyerName = o.account_name || o.order_full_name || "-";
-    const buyerPhone = o.account_phone || o.order_phone || "-";
+    const buyerName = escapeHtml(o.account_name || o.order_full_name || "-");
+    const buyerPhone = escapeHtml(o.account_phone || o.order_phone || "-");
+    const productName = escapeHtml(o.product_name || "-");
+    const safeColor = escapeHtml(o.color || "-");
+    const safeSize = escapeHtml(o.size || "-");
+    const safeAmount = escapeHtml(o.amount || "-");
+    const safeNote = escapeHtml(o.note ? o.note : "-");
+    const safeImageAlt = productName;
 
     return `
     <article class="history-item">
       <div class="admin-order-head">
-        ${productImage ? `<img class="admin-order-image" src="${productImage}" alt="${o.product_name}">` : ""}
+        ${productImage ? `<img class="admin-order-image" src="${productImage}" alt="${safeImageAlt}">` : ""}
         <div class="admin-order-head-content">
       <div class="meta">
-        <div class="name">#${o.id} - ${o.product_name}</div>
+        <div class="name">#${o.id} - ${productName}</div>
         <div class="price">${total.toFixed(2)} Dt</div>
       </div>
       <div class="desc">Buyer: <strong>${buyerName}</strong> (<strong>${buyerPhone}</strong>)</div>
       ${accountSigns ? `<div class="desc">${accountSigns}</div>` : ""}
-      <div class="desc">Color: <strong>${o.color}</strong> • Size: <strong>${o.size}</strong> • Amount: <strong>${o.amount}</strong></div>
+      <div class="desc">Color: <strong>${safeColor}</strong> • Size: <strong>${safeSize}</strong> • Amount: <strong>${safeAmount}</strong></div>
       <div class="desc">Product: <strong>${productTotal.toFixed(2)} Dt</strong> + Delivery: <strong>${delivery > 0 ? `${delivery.toFixed(2)} Dt` : "OFF"}</strong> = Total: <strong>${total.toFixed(2)} Dt</strong></div>
-      <div class="desc">Note: <strong>${o.note ? o.note : "-"}</strong></div>
+      <div class="desc">Note: <strong>${safeNote}</strong></div>
       <div class="desc">Date: ${new Date(o.created_at).toLocaleString()}</div>
         </div>
       </div>

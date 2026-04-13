@@ -169,6 +169,30 @@ function isValidTunisiaPhone(phone) {
   return /^\+216\d{8}$/.test(normalizePhone(phone));
 }
 
+const ALLOWED_ORDER_SIZES = new Set(["S", "M", "L", "XL", "XXL"]);
+const COLOR_CODE_TO_LABEL = {
+  B: "Black",
+  W: "White",
+  Br: "Brown",
+  P: "Pink",
+  Grey: "Grey"
+};
+const COLOR_LABEL_TO_CODE = Object.fromEntries(
+  Object.entries(COLOR_CODE_TO_LABEL).map(([code, label]) => [String(label).toLowerCase(), code])
+);
+
+function parseAllowedProductColors(colorsCsv, mainColor) {
+  const allowed = new Set(Object.keys(COLOR_CODE_TO_LABEL));
+  const parsed = String(colorsCsv || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => allowed.has(item));
+
+  if (parsed.length) return parsed;
+  if (allowed.has(String(mainColor || ""))) return [String(mainColor)];
+  return ["W"];
+}
+
 function getPasswordLevel(password) {
   const value = String(password || "");
   let score = 0;
@@ -714,19 +738,78 @@ app.post("/api/orders", async (req, res) => {
   try {
     const {
       productId,
-      productName,
       color,
       size,
       amount,
-      unitPriceDt,
       fullName,
       phone,
       address,
       note
     } = req.body;
 
-    if (!productId || !productName || !color || !size || !amount || !unitPriceDt || !fullName || !address) {
+    if (!productId || !color || !size || !amount || !fullName || !address) {
       return res.status(400).json({ message: "Missing order fields." });
+    }
+
+    const productIdNumber = Number(productId);
+    if (!Number.isInteger(productIdNumber) || productIdNumber <= 0) {
+      return res.status(400).json({ message: "Invalid product." });
+    }
+
+    const selectedSize = String(size || "").trim().toUpperCase();
+    if (!ALLOWED_ORDER_SIZES.has(selectedSize)) {
+      return res.status(400).json({ message: "Invalid size." });
+    }
+
+    const amountNumber = Number(amount);
+    if (!Number.isInteger(amountNumber) || amountNumber < 1 || amountNumber > 20) {
+      return res.status(400).json({ message: "Invalid amount." });
+    }
+
+    const cleanAddress = String(address || "").trim();
+    if (!cleanAddress || cleanAddress.length > 500) {
+      return res.status(400).json({ message: "Address is required and must be valid." });
+    }
+
+    const cleanNote = String(note || "").trim();
+    if (cleanNote.length > 600) {
+      return res.status(400).json({ message: "Note is too long." });
+    }
+
+    await ensureProductsSchema();
+    const [productRows] = await pool.query(
+      "SELECT id, name, price_cents, colors_csv, main_color, sold_out FROM products WHERE id = ? LIMIT 1",
+      [productIdNumber]
+    );
+
+    if (!productRows.length) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    const dbProduct = productRows[0];
+    if (Number(dbProduct.sold_out || 0) === 1) {
+      return res.status(400).json({ message: "This product is sold out." });
+    }
+
+    const unitPriceNumber = Number(dbProduct.price_cents || 0) / 100;
+    if (!Number.isFinite(unitPriceNumber) || unitPriceNumber <= 0) {
+      return res.status(400).json({ message: "Invalid product price." });
+    }
+
+    const incomingColor = String(color || "").trim();
+    const incomingCode = COLOR_CODE_TO_LABEL[incomingColor]
+      ? incomingColor
+      : (COLOR_LABEL_TO_CODE[incomingColor.toLowerCase()] || "");
+
+    const allowedColors = parseAllowedProductColors(dbProduct.colors_csv, dbProduct.main_color);
+    if (!incomingCode || !allowedColors.includes(incomingCode)) {
+      return res.status(400).json({ message: "Invalid color." });
+    }
+
+    const safeColorLabel = COLOR_CODE_TO_LABEL[incomingCode] || incomingCode;
+    const safeProductName = String(dbProduct.name || "").trim();
+    if (!safeProductName) {
+      return res.status(400).json({ message: "Invalid product name." });
     }
 
     const userId = req.session.user?.id || null;
@@ -749,12 +832,6 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ message: "Phone must be +216 followed by 8 numbers." });
     }
 
-    const amountNumber = Number(amount);
-    const unitPriceNumber = Number(unitPriceDt);
-    if (!Number.isFinite(amountNumber) || amountNumber < 1 || !Number.isFinite(unitPriceNumber) || unitPriceNumber <= 0) {
-      return res.status(400).json({ message: "Invalid pricing fields." });
-    }
-
     const effectiveDeliveryFee = DEFAULT_DELIVERY_FEE_DT;
     const effectiveTotalPrice = (unitPriceNumber * amountNumber) + effectiveDeliveryFee;
 
@@ -764,18 +841,18 @@ app.post("/api/orders", async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         userId,
-        Number(productId),
-        productName,
-        color,
-        size,
+        productIdNumber,
+        safeProductName,
+        safeColorLabel,
+        selectedSize,
         amountNumber,
         unitPriceNumber,
         effectiveDeliveryFee,
         effectiveTotalPrice,
         fullName,
         resolvedPhone,
-        address,
-        note || null
+        cleanAddress,
+        cleanNote || null
       ]
     );
 

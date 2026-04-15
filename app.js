@@ -1,5 +1,7 @@
 const shop = document.getElementById("shop");
 const waveTabs = document.querySelectorAll(".wave-tab");
+const dbLoadingScreen = document.getElementById("db-loading-screen");
+const dbLoadingMessage = document.getElementById("db-loading-message");
 
 let activeWave = "1stDrop";
 const selectedColors = new Map();
@@ -11,7 +13,35 @@ async function checkDBHealth() {
     const response = await fetch("/api/health", { cache: "no-store" });
     return response.status !== 503;
   } catch {
-    return true; // Assume available on network errors, let API handle it
+    return false;
+  }
+}
+
+function showDbLoadingScreen(message) {
+  if (!dbLoadingScreen) return;
+  dbLoadingScreen.classList.remove("hidden");
+  if (dbLoadingMessage && message) {
+    dbLoadingMessage.textContent = message;
+  }
+}
+
+function hideDbLoadingScreen() {
+  if (!dbLoadingScreen) return;
+  dbLoadingScreen.classList.add("hidden");
+}
+
+async function waitForDatabaseAndReload() {
+  showDbLoadingScreen("Please wait while we connect to the database.");
+
+  while (true) {
+    const isReady = await checkDBHealth();
+    if (isReady) {
+      showDbLoadingScreen("Database connected. Refreshing store...");
+      window.location.reload();
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 }
 
@@ -234,4 +264,16 @@ waveTabs.forEach((tab) => {
   tab.addEventListener("click", () => setWave(tab.dataset.wave));
 });
 
-loadCatalogFromDatabase();
+async function initializeStore() {
+  const isDBAvailable = await checkDBHealth();
+
+  if (!isDBAvailable) {
+    await waitForDatabaseAndReload();
+    return;
+  }
+
+  hideDbLoadingScreen();
+  loadCatalogFromDatabase();
+}
+
+initializeStore();

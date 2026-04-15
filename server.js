@@ -56,7 +56,7 @@ setInterval(() => {
   checkDatabaseConnection().catch(() => {
     isDatabaseConnected = false;
   });
-}, 30_000);
+}, 5_000);
 
 setInterval(() => {
   if (!isDatabaseConnected) return;
@@ -80,66 +80,13 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
-  if (isDatabaseConnected) {
+  if (isDatabaseConnected || !req.path.startsWith("/api/")) {
     return next();
   }
 
-  if (req.path.startsWith("/api/")) {
-    return res.status(503).json({
-      message: "The website is down for maintenance, comeback later."
-    });
-  }
-
-  res.status(503).type("html").send(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maintenance</title>
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.2), transparent 28%),
-                  radial-gradient(circle at 85% 5%, rgba(34, 211, 238, 0.2), transparent 24%),
-                  #0b1220;
-      color: #e2e8f0;
-      padding: 24px;
-    }
-    .card {
-      width: min(640px, 100%);
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      border-radius: 16px;
-      padding: 28px;
-      text-align: center;
-      box-shadow: 0 16px 48px rgba(2, 6, 23, 0.5);
-    }
-    h1 {
-      margin: 0 0 10px;
-      font-size: clamp(26px, 4.5vw, 38px);
-      letter-spacing: -0.02em;
-    }
-    p {
-      margin: 0;
-      color: #cbd5e1;
-      font-size: 18px;
-      line-height: 1.5;
-    }
-  </style>
-</head>
-<body>
-  <main class="card">
-    <h1>Waves Streetwear</h1>
-    <p>The website is down for maintenance, comeback later.</p>
-  </main>
-</body>
-</html>`);
+  return res.status(503).json({
+    message: "The website is down for maintenance, comeback later."
+  });
 });
 
 app.use(express.static(path.join(__dirname)));

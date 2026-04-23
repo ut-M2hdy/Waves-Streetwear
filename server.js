@@ -1677,6 +1677,7 @@ function sendPage(pageFile) {
 
 app.get("/", sendPage("index.html"));
 app.get("/auth", sendPage("auth.html"));
+app.get("/signup", sendPage("signup.html"));
 app.get("/admin", sendPage("admin.html"));
 app.get("/history", sendPage("history.html"));
 app.get("/profile", sendPage("profile.html"));

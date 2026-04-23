@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | WAVES</title>
+  <title>Create Account | WAVES</title>
   <link rel="stylesheet" href="styles.css?v=20260401-5">
   <link rel="icon" type="image/x-icon" href="img/logo_waves_TRANS.ico">
 </head>
@@ -14,27 +14,38 @@
     </div>
     <div class="header-actions">
       <a class="header-link-btn" href="/">Back to Shop</a>
+      <a class="header-link-btn" href="/auth">Login</a>
     </div>
   </header>
 
-  <main class="auth-page auth-login-page">
-    <section class="auth-card auth-card-login" id="login">
+  <main class="auth-page auth-signup-page">
+    <section class="auth-card auth-card-signup">
       <div class="auth-card-header">
-        <h1>Welcome back</h1>
-        <p class="desc">Login to track your orders and manage your profile.</p>
+        <h1>Create account</h1>
+        <p class="desc">Default account type is user. Admin can only be set by developer in database.</p>
       </div>
-      <form id="login-form" class="order-form">
+      <form id="register-form" class="order-form">
+        <label>Full name
+          <input name="fullName" required placeholder="First Last">
+        </label>
         <label>Phone
-          <input name="phone" id="login-phone" required value="+216" maxlength="12" placeholder="+216XXXXXXXX">
+          <input name="phone" id="register-phone" required value="+216" maxlength="12" placeholder="+216XXXXXXXX">
+        </label>
+        <label>Address
+          <textarea name="address" required placeholder="Street, city"></textarea>
         </label>
         <label>Password
-          <input name="password" type="password" required>
+          <input name="password" id="register-password" type="password" minlength="8" required>
         </label>
-        <button class="btn primary" type="submit">Login</button>
+        <div id="password-strength" class="password-strength level-low">Security level: low</div>
+        <label>Confirm password
+          <input name="confirmPassword" type="password" minlength="8" required>
+        </label>
+        <button class="btn primary" type="submit">Create account</button>
       </form>
       <div class="auth-card-footer">
-        <span class="desc">New to WAVES?</span>
-        <a class="btn secondary" href="/signup">Create account</a>
+        <span class="desc">Already have an account?</span>
+        <a class="btn secondary" href="/auth">Back to login</a>
       </div>
     </section>
 
@@ -57,6 +68,6 @@
     <a class="footer-link" href="/privacy">Privacy policy</a>
   </footer>
 
-  <script src="auth.js?v=20260409-5"></script>
+  <script src="signup.js?v=20260423-1"></script>
 </body>
 </html>

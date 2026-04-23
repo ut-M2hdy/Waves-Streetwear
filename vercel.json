@@ -12,6 +12,11 @@
       "permanent": true
     },
     {
+      "source": "/signup.html",
+      "destination": "/signup",
+      "permanent": true
+    },
+    {
       "source": "/admin.html",
       "destination": "/admin",
       "permanent": true

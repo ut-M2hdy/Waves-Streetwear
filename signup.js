@@ -55,8 +55,6 @@ function renderMaintenancePage() {
   document.close();
 }
 
-// Check DB health and show maintenance if unavailable
-// Returns true if DB is available, false if unavailable (will show maintenance)
 async function checkDBHealth() {
   try {
     const response = await fetch("/api/health", { cache: "no-store" });
@@ -66,7 +64,7 @@ async function checkDBHealth() {
     }
 
     if (!response.ok) {
-      return true; // Assume available on non-503 errors
+      return true;
     }
 
     const payload = await response.json().catch(() => ({}));
@@ -75,15 +73,17 @@ async function checkDBHealth() {
       return false;
     }
   } catch {
-    return true; // Assume available on network errors
+    return true;
   }
 
   return true;
 }
 
-const loginForm = document.getElementById("login-form");
+const registerForm = document.getElementById("register-form");
 const messageBox = document.getElementById("auth-message");
-const loginPhoneInput = document.getElementById("login-phone");
+const registerPhoneInput = document.getElementById("register-phone");
+const registerPasswordInput = document.getElementById("register-password");
+const passwordStrengthEl = document.getElementById("password-strength");
 
 function showMessage(message, ok = false) {
   messageBox.textContent = message;
@@ -141,26 +141,53 @@ function getPasswordLevel(password) {
 }
 
 function renderPasswordLevel(password) {
-  return getPasswordLevel(password);
+  if (!passwordStrengthEl) return;
+  const level = getPasswordLevel(password);
+  passwordStrengthEl.classList.remove("level-low", "level-mid", "level-strong");
+  passwordStrengthEl.classList.add(`level-${level}`);
+  passwordStrengthEl.textContent = `Security level: ${level}`;
 }
 
-async function initAuthPage() {
-  enforcePhonePrefix(loginPhoneInput);
+async function initSignupPage() {
+  enforcePhonePrefix(registerPhoneInput);
+  registerPasswordInput?.addEventListener("input", () => {
+    renderPasswordLevel(registerPasswordInput.value);
+  });
+  renderPasswordLevel(registerPasswordInput?.value || "");
+  await checkDBHealth();
 }
 
-initAuthPage();
+initSignupPage();
 
-loginForm.addEventListener("submit", async (event) => {
+registerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(loginForm).entries());
+  const data = Object.fromEntries(new FormData(registerForm).entries());
 
+  if (!isValidFullName(data.fullName)) {
+    showMessage("Full name must contain a space and no numbers.");
+    return;
+  }
   if (!isValidTunisiaPhone(data.phone)) {
     showMessage("Phone must be +216 followed by 8 numbers.");
     return;
   }
+  if (!String(data.address || "").trim()) {
+    showMessage("Address is required.");
+    return;
+  }
+
+  const passwordLevel = getPasswordLevel(data.password);
+  if (passwordLevel === "low") {
+    showMessage("Password security is low. Use a mid or strong password.");
+    return;
+  }
+  if (String(data.password || "") !== String(data.confirmPassword || "")) {
+    showMessage("Password confirmation does not match.");
+    return;
+  }
 
   try {
-    const response = await fetch("/api/auth/login", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -168,15 +195,15 @@ loginForm.addEventListener("submit", async (event) => {
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      showMessage(payload.message || "Login failed.");
+      showMessage(payload.message || "Register failed.");
       return;
     }
 
-    showMessage("Logged in successfully.", true);
+    showMessage("Account created and logged in.", true);
     setTimeout(() => {
       window.location.href = "/";
-    }, 500);
+    }, 700);
   } catch (error) {
-    showMessage("Cannot connect to server. Start backend and open http://localhost:3000/auth");
+    showMessage("Cannot connect to server. Start backend and open http://localhost:3000/signup");
   }
 });

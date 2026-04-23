@@ -17,22 +17,29 @@
 	</div>
 
 	<header>
-		<div class="logo">
-			<img src="img/logo_waves_TRANS.png" alt="Waves Store logo">
+		<div class="header-top">
+			<div class="logo">
+				<img src="img/logo_waves_TRANS.png" alt="Waves Store logo">
+			</div>
+			<button class="mobile-menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+				<span></span>
+			</button>
 		</div>
-		<nav class="wave-tabs" aria-label="Wave collections">
-			<button class="wave-tab wave-tab-disabled" type="button" disabled aria-disabled="true">New Drop <span class="wave-soon-badge">Coming Soon</span></button>
-			<button class="wave-tab active" data-wave="1stDrop">Cold Nights Drop</button>
-			<button class="wave-tab" data-wave="UPSIDE DOWN">WAVE: UPSIDE DOWN</button>
-			<button class="wave-tab" data-wave="CAIROKEE">WAVE: CAIROKEE</button>
-			<button class="wave-tab" data-wave="LEMHAF">WAVE: LEMHAF</button>
-		</nav>
-		<div class="header-actions">
-			<a class="header-link-btn hidden" id="admin-btn" href="/admin">Admin</a>
-			<a class="header-link-btn hidden" id="profile-btn" href="/profile">Edit Profile</a>
-			<a class="header-link-btn hidden" id="history-btn" href="/history">My History</a>
-			<a class="header-link-btn" id="auth-btn" href="/auth">Login</a>
-			<button class="cta" onclick="scrollToShop()">Shop Hoodies</button>
+		<div class="mobile-menu">
+			<nav class="wave-tabs" aria-label="Wave collections">
+				<button class="wave-tab wave-tab-disabled" type="button" disabled aria-disabled="true">New Drop <span class="wave-soon-badge">Coming Soon</span></button>
+				<button class="wave-tab active" data-wave="1stDrop">Cold Nights Drop</button>
+				<button class="wave-tab" data-wave="UPSIDE DOWN">WAVE: UPSIDE DOWN</button>
+				<button class="wave-tab" data-wave="CAIROKEE">WAVE: CAIROKEE</button>
+				<button class="wave-tab" data-wave="LEMHAF">WAVE: LEMHAF</button>
+			</nav>
+			<div class="header-actions">
+				<a class="header-link-btn hidden" id="admin-btn" href="/admin">Admin</a>
+				<a class="header-link-btn hidden" id="profile-btn" href="/profile">Edit Profile</a>
+				<a class="header-link-btn hidden" id="history-btn" href="/history">My History</a>
+				<a class="header-link-btn" id="auth-btn" href="/auth">Login</a>
+				<button class="cta" onclick="scrollToShop()">Shop Hoodies</button>
+			</div>
 		</div>
 	</header>
 

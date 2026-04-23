@@ -221,6 +221,31 @@ async function refreshAuthButtons() {
   mountProfileMenu(authBtn, payload.user);
 }
 
+function initMobileMenu() {
+  const toggle = document.querySelector(".mobile-menu-toggle");
+  if (!toggle) return;
+
+  const header = toggle.closest("header");
+  if (!header) return;
+
+  const setExpanded = (isOpen) => {
+    toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    header.classList.toggle("menu-open", isOpen);
+  };
+
+  toggle.addEventListener("click", () => {
+    const isOpen = header.classList.contains("menu-open");
+    setExpanded(!isOpen);
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 640) {
+      setExpanded(false);
+    }
+  });
+}
+
 (async () => {
   refreshAuthButtons();
+  initMobileMenu();
 })();

@@ -30,10 +30,10 @@ function getDbSslConfig() {
 app.set("trust proxy", 1);
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "127.0.0.1",
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
+  host: process.env.DB_HOST || "gateway01.eu-central-1.prod.aws.tidbcloud.com",
+  port: Number(process.env.DB_PORT || 4000),
+  user: process.env.DB_USER || "4NQ23e7TfJfS3FG.root",
+  password: process.env.DB_PASSWORD || "CSb2rungxpYFkQ1o",
   database: process.env.DB_NAME || "store_waves",
   ssl: getDbSslConfig(),
   waitForConnections: true,

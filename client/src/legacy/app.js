@@ -3,6 +3,11 @@ const waveTabs = document.querySelectorAll(".wave-tab");
 const dbLoadingScreen = document.getElementById("db-loading-screen");
 const dbLoadingMessage = document.getElementById("db-loading-message");
 
+const COLOR_LABELS = window.COLOR_LABELS || {};
+const normalizeProductColor = window.normalizeProductColor || ((_, color) => color);
+const getProductImageCandidates = window.getProductImageCandidates || (() => []);
+const getMainProductImage = window.getMainProductImage || (() => "");
+
 let activeWave = "Scene Stealer";
 const selectedColors = new Map();
 let catalogProducts = [];

@@ -1,4 +1,6 @@
 const path = require("path");
+const http = require("http");
+const https = require("https");
 const fs = require("fs/promises");
 const express = require("express");
 const session = require("express-session");
@@ -10,6 +12,41 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const DEFAULT_DELIVERY_FEE_DT = Number(process.env.DEFAULT_DELIVERY_FEE_DT || 9);
 const SEWING_COST_DT = Number(process.env.SEWING_COST_DT || 35);
+const PRODUCTS_CACHE_TTL_MS = Number(process.env.PRODUCTS_CACHE_TTL_MS || 30_000);
+const KEEP_WARM_URL = String(process.env.KEEP_WARM_URL || "").trim();
+const KEEP_WARM_INTERVAL_MS = Number(process.env.KEEP_WARM_INTERVAL_MS || 10 * 60 * 1000);
+
+const productsCache = {
+  data: null,
+  fetchedAt: 0,
+  refreshPromise: null
+};
+
+async function loadProducts() {
+  await ensureProductsSchema();
+  const [rows] = await pool.query(
+    "SELECT id, name, price_cents, wave, colors_csv, main_color, sold_out, image_url, color_images_map, description FROM products ORDER BY id ASC"
+  );
+  productsCache.data = rows;
+  productsCache.fetchedAt = Date.now();
+  return rows;
+}
+
+function pingKeepWarm(url) {
+  if (!url) return;
+  try {
+    const target = new URL(url);
+    const lib = target.protocol === "https:" ? https : http;
+    const req = lib.request(target, { method: "GET" }, (res) => {
+      res.on("data", () => {});
+      res.on("end", () => {});
+    });
+    req.on("error", () => {});
+    req.end();
+  } catch {
+    // ignore malformed url
+  }
+}
 
 function getDbSslConfig() {
   const sslRequired = ["1", "true", "yes", "required"].includes(String(process.env.DB_SSL_REQUIRED || "").toLowerCase());
@@ -34,7 +71,7 @@ const pool = mysql.createPool({
   port: Number(process.env.DB_PORT || 4000),
   user: process.env.DB_USER || "4NQ23e7TfJfS3FG.root",
   password: process.env.DB_PASSWORD || "CSb2rungxpYFkQ1o",
-  database: process.env.DB_NAME || "store_waves",
+  database: process.env.DB_NAME || "store_waves_test_test_test",
   ssl: getDbSslConfig(),
   waitForConnections: true,
   connectionLimit: 10,
@@ -89,7 +126,9 @@ app.use((req, res, next) => {
   });
 });
 
-app.use(express.static(path.join(__dirname)));
+// Serve React production build from dist (at root level)
+app.use("/img", express.static(path.join(__dirname, "img")));
+app.use(express.static(path.join(__dirname, "dist")));
 
 function sanitizeUser(user) {
   return {
@@ -442,11 +481,35 @@ app.get("/api/admin/image-files", requireAdmin, async (_req, res) => {
 
 app.get("/api/products", async (_req, res) => {
   try {
-    await ensureProductsSchema();
-    const [rows] = await pool.query(
-      "SELECT id, name, price_cents, wave, colors_csv, main_color, sold_out, image_url, color_images_map, description FROM products ORDER BY id ASC"
-    );
-    res.json({ products: rows });
+    res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
+    const now = Date.now();
+    const isFresh = productsCache.data && now - productsCache.fetchedAt < PRODUCTS_CACHE_TTL_MS;
+
+    if (isFresh) {
+      return res.json({ products: productsCache.data, cached: true });
+    }
+
+    if (!productsCache.refreshPromise) {
+      productsCache.refreshPromise = loadProducts()
+        .catch((error) => {
+          console.error(error);
+          return null;
+        })
+        .finally(() => {
+          productsCache.refreshPromise = null;
+        });
+    }
+
+    if (productsCache.data) {
+      return res.json({ products: productsCache.data, cached: true, stale: true });
+    }
+
+    const rows = await productsCache.refreshPromise;
+    if (rows) {
+      return res.json({ products: rows });
+    }
+
+    return res.status(500).json({ message: "Could not fetch products." });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not fetch products." });
@@ -1669,21 +1732,12 @@ app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
   }
 });
 
-function sendPage(pageFile) {
-  return (_req, res) => {
-    res.sendFile(path.join(__dirname, pageFile));
-  };
-}
-
-app.get("/", sendPage("index.html"));
-app.get("/auth", sendPage("auth.html"));
-app.get("/signup", sendPage("signup.html"));
-app.get("/admin", sendPage("admin.html"));
-app.get("/history", sendPage("history.html"));
-app.get("/profile", sendPage("profile.html"));
-app.get("/privacy", sendPage("privacy.html"));
-app.get("/product", sendPage("product.html"));
-app.get("/order-success", sendPage("order-success.html"));
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ message: "API route not found" });
+  }
+  return res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 checkDatabaseConnection().finally(() => {
 ensureUsersAddressColumn().finally(() => {
@@ -1722,8 +1776,15 @@ ensureUsersAddressColumn().finally(() => {
                               console.error("Auto verify check failed:", error.message);
                             })
                             .finally(() => {
+                              loadProducts().catch((error) => {
+                                console.error("Products cache warmup failed:", error.message);
+                              });
                               app.listen(PORT, () => {
                                 console.log(`WAVES server running on http://localhost:${PORT}`);
+                                if (KEEP_WARM_URL && KEEP_WARM_INTERVAL_MS > 0) {
+                                  pingKeepWarm(KEEP_WARM_URL);
+                                  setInterval(() => pingKeepWarm(KEEP_WARM_URL), KEEP_WARM_INTERVAL_MS);
+                                }
                               });
                             });
                         });

@@ -49,17 +49,14 @@
       "permanent": true
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "handle": "filesystem"
+      "source": "/api/:path*",
+      "destination": "https://waves-streetwear.onrender.com/api/:path*"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "https://waves-streetwear.onrender.com/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

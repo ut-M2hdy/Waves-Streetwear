@@ -1,3 +1,40 @@
+.maintenance-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 12, 8, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(6px);
+}
+
+.maintenance-card {
+  background: #f7efe7;
+  color: #3c2a1f;
+  border: 1px solid rgba(60, 42, 31, 0.2);
+  border-radius: 18px;
+  padding: 32px 28px;
+  max-width: 460px;
+  width: calc(100% - 48px);
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.maintenance-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.maintenance-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.6rem;
+}
+
+.maintenance-card p {
+  margin: 0 0 18px;
+  font-size: 1rem;
+}
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap");
 
 :root {

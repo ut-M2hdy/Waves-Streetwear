@@ -11,6 +11,7 @@ import Privacy from "./pages/Privacy.jsx";
 import OrderSuccess from "./pages/OrderSuccess.jsx";
 
 function App() {
+  const forceMaintenance = import.meta.env.VITE_FORCE_MAINTENANCE === "true";
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -32,10 +33,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (forceMaintenance) {
+      setIsMaintenance(true);
+      setIsChecking(false);
+      return undefined;
+    }
     checkHealth();
     const id = setInterval(checkHealth, 30000);
     return () => clearInterval(id);
-  }, [checkHealth]);
+  }, [checkHealth, forceMaintenance]);
 
   return (
     <BrowserRouter>

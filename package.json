@@ -5,11 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "npm --prefix client run build",
+    "build": "npm --prefix client run build && node scripts/copy-static.js",
     "dev": "npm --prefix client run dev",
     "client:install": "npm --prefix client install",
     "postinstall": "npm --prefix client install",
-    "vercel-build": "npm --prefix client install && npm --prefix client run build"
+    "vercel-build": "npm --prefix client install && npm --prefix client run build && node scripts/copy-static.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

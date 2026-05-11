@@ -2,7 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 
 const projectRoot = path.resolve(__dirname, "..");
-const distDir = path.join(projectRoot, "dist");
+const distDir = path.join(projectRoot, "client", "dist");
 const imgDir = path.join(projectRoot, "img");
 
 async function copyDir(src, dest) {

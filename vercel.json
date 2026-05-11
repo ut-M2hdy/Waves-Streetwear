@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run vercel-build",
-  "outputDirectory": "dist",
+  "outputDirectory": "client/dist",
   "cleanUrls": true,
   "redirects": [
     {

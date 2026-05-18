@@ -13,9 +13,8 @@
     { "source": "/product.html", "destination": "/product", "permanent": true },
     { "source": "/order-success.html", "destination": "/order-success", "permanent": true }
   ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/api/(.*)", "dest": "https://waves-streetwear.onrender.com/api/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://waves-streetwear.onrender.com/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

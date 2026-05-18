@@ -275,9 +275,11 @@ header {
   color: #2b1207;
 }
 .wave-tab.scene-stealer {
-  font-family: "Cinzel", "Times New Roman", serif;
-  letter-spacing: 0.08em;
+  font-family: "Bebas Neue", "Oswald", "Impact", "Arial Black", sans-serif;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  font-size: 14px;
+  text-shadow: 0 1px 6px rgba(255, 180, 0, 0.35);
 }
 .wave-tab.wave-tab-disabled {
   opacity: 0.78;

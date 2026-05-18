@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Beside Horizon";
+  src: url("/font/Beside%20Horizon.otf") format("opentype");
+  font-display: swap;
+  font-weight: 400;
+  font-style: normal;
+}
+
 .maintenance-overlay {
   position: fixed;
   inset: 0;
@@ -275,7 +283,7 @@ header {
   color: #2b1207;
 }
 .wave-tab.scene-stealer {
-  font-family: "Cinzel", "Times New Roman", serif;
+  font-family: "Beside Horizon", "Cinzel", "Times New Roman", serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

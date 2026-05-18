@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import useLegacyModule from "../hooks/useLegacyModule";
 
 export default function Admin() {
-  const [isChecking, setIsChecking] = useState(true);
+  const [adminState, setAdminState] = useState("checking");
 
   useEffect(() => {
     let isActive = true;
@@ -11,21 +11,21 @@ export default function Admin() {
       try {
         const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (!res.ok) {
-          window.location.href = "/auth";
+          if (isActive) setAdminState("denied");
           return;
         }
         const data = await res.json().catch(() => null);
         if (!data?.user || data.user.role !== "admin") {
-          window.location.href = "/auth";
+          if (isActive) setAdminState("denied");
           return;
         }
       } catch {
-        window.location.href = "/auth";
+        if (isActive) setAdminState("denied");
         return;
       }
 
       if (isActive) {
-        setIsChecking(false);
+        setAdminState("allowed");
       }
     };
 
@@ -35,13 +35,29 @@ export default function Admin() {
     };
   }, []);
 
-  if (isChecking) {
+  if (adminState === "checking") {
     return (
       <div className="maintenance-overlay" role="status" aria-live="polite">
         <div className="maintenance-card">
           <div className="maintenance-icon">🔒</div>
           <h2>Checking admin access</h2>
           <p>Please wait a moment.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (adminState === "denied") {
+    return (
+      <div className="maintenance-overlay" role="alert" aria-live="assertive">
+        <div className="maintenance-card">
+          <div className="maintenance-icon">⛔</div>
+          <h2>Admin access only</h2>
+          <p>Please sign in with an admin account.</p>
+          <div className="btn-row" style={{ justifyContent: "center" }}>
+            <a className="btn primary" href="/auth">Go to login</a>
+            <a className="btn" href="/">Back to shop</a>
+          </div>
         </div>
       </div>
     );

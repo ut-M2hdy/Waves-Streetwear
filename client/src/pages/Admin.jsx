@@ -1,8 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useLegacyModule from "../hooks/useLegacyModule";
 
 export default function Admin() {
   const [adminState, setAdminState] = useState("checking");
+
+  const loadAdminModules = useCallback(() => {
+    if (adminState !== "allowed") {
+      return Promise.resolve();
+    }
+    return Promise.all([
+      import("../legacy/auth-ui.js"),
+      import("@root/admin.js")
+    ]);
+  }, [adminState]);
+
+  useLegacyModule(loadAdminModules);
 
   useEffect(() => {
     let isActive = true;
@@ -62,9 +74,6 @@ export default function Admin() {
       </div>
     );
   }
-
-  useLegacyModule(() => import("../legacy/auth-ui.js"));
-  useLegacyModule(() => import("@root/admin.js"));
 
   return (
     <>

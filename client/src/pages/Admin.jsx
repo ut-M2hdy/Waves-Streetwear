@@ -1,6 +1,52 @@
+import { useEffect, useState } from "react";
 import useLegacyModule from "../hooks/useLegacyModule";
 
 export default function Admin() {
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const verifyAdmin = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!res.ok) {
+          window.location.href = "/auth";
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (!data?.user || data.user.role !== "admin") {
+          window.location.href = "/auth";
+          return;
+        }
+      } catch {
+        window.location.href = "/auth";
+        return;
+      }
+
+      if (isActive) {
+        setIsChecking(false);
+      }
+    };
+
+    verifyAdmin();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  if (isChecking) {
+    return (
+      <div className="maintenance-overlay" role="status" aria-live="polite">
+        <div className="maintenance-card">
+          <div className="maintenance-icon">🔒</div>
+          <h2>Checking admin access</h2>
+          <p>Please wait a moment.</p>
+        </div>
+      </div>
+    );
+  }
+
   useLegacyModule(() => import("../legacy/auth-ui.js"));
   useLegacyModule(() => import("@root/admin.js"));
 

@@ -128,7 +128,6 @@ app.use((req, res, next) => {
 
 // Serve React production build from client/dist
 app.use("/img", express.static(path.join(__dirname, "img")));
-app.use("/font", express.static(path.join(__dirname, "font")));
 app.use(express.static(path.join(__dirname, "client", "dist")));
 
 function sanitizeUser(user) {

@@ -4,7 +4,6 @@ const path = require("path");
 const projectRoot = path.resolve(__dirname, "..");
 const distDir = path.join(projectRoot, "client", "dist");
 const imgDir = path.join(projectRoot, "img");
-const fontDir = path.join(projectRoot, "font");
 
 async function copyDir(src, dest) {
   await fs.mkdir(dest, { recursive: true });
@@ -32,20 +31,12 @@ async function main() {
     await fs.access(imgDir);
   } catch {
     console.warn("img folder not found. Skipping static copy.");
+    return;
   }
 
-  const imgTarget = path.join(distDir, "img");
-  await copyDir(imgDir, imgTarget);
+  const target = path.join(distDir, "img");
+  await copyDir(imgDir, target);
   console.log("Copied img to dist/img");
-
-  try {
-    await fs.access(fontDir);
-    const fontTarget = path.join(distDir, "font");
-    await copyDir(fontDir, fontTarget);
-    console.log("Copied font to dist/font");
-  } catch {
-    console.warn("font folder not found. Skipping font copy.");
-  }
 }
 
 main().catch((error) => {

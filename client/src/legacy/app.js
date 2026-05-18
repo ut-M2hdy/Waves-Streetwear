@@ -11,6 +11,8 @@ const getMainProductImage = window.getMainProductImage || (() => "");
 let activeWave = "Scene Stealer";
 const selectedColors = new Map();
 let catalogProducts = [];
+const CATALOG_CACHE_KEY = "waves_products_cache_v1";
+const CATALOG_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 // Check DB health - returns true if available, false if unavailable
 async function checkDBHealth() {
@@ -81,6 +83,15 @@ async function loadCatalogFromDatabase() {
     const dbProducts = payload.products || [];
     if (!Array.isArray(dbProducts) || !dbProducts.length) return;
 
+    try {
+      localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({
+        ts: Date.now(),
+        products: dbProducts
+      }));
+    } catch {
+      // ignore cache write errors
+    }
+
     catalogProducts = dbProducts.map((row) => {
       const parsedColors = parseProductColors(row, ["W"]);
       const normalizedMainColor = parsedColors.includes(row.main_color) ? row.main_color : parsedColors[0];
@@ -103,6 +114,44 @@ async function loadCatalogFromDatabase() {
   }
 
   renderProducts();
+}
+
+function loadCatalogFromCache() {
+  try {
+    const raw = localStorage.getItem(CATALOG_CACHE_KEY);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.products)) return false;
+
+    const isFresh = Date.now() - Number(parsed.ts || 0) < CATALOG_CACHE_TTL_MS;
+    if (!isFresh) return false;
+
+    const cachedProducts = parsed.products;
+    if (!cachedProducts.length) return false;
+
+    catalogProducts = cachedProducts.map((row) => {
+      const parsedColors = parseProductColors(row, ["W"]);
+      const normalizedMainColor = parsedColors.includes(row.main_color) ? row.main_color : parsedColors[0];
+      return {
+        id: Number(row.id),
+        name: row.name,
+        price: Number(row.price_cents || 0) / 100,
+        desc: row.description || "",
+        imageUrl: row.image_url || "",
+        colorImagesMap: row.color_images_map || "",
+        wave: String(row.wave || "1stDrop"),
+        colors: parsedColors,
+        mainColor: normalizedMainColor,
+        soldOut: Number(row.sold_out || 0) === 1
+      };
+    });
+
+    renderProducts();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function getSelectedColor(product) {
@@ -270,14 +319,17 @@ waveTabs.forEach((tab) => {
 });
 
 async function initializeStore() {
-  const isDBAvailable = await checkDBHealth();
+  const hasCache = loadCatalogFromCache();
+  hideDbLoadingScreen();
 
-  if (!isDBAvailable) {
-    await waitForDatabaseAndReload();
-    return;
+  if (!hasCache) {
+    const isDBAvailable = await checkDBHealth();
+    if (!isDBAvailable) {
+      showDbLoadingScreen("Please wait while we connect to the database.");
+      return;
+    }
   }
 
-  hideDbLoadingScreen();
   loadCatalogFromDatabase();
 }
 

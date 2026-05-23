@@ -934,11 +934,19 @@ app.get("/api/admin/summary", requireAdmin, async (_req, res) => {
     const [[ordersCountRow]] = await pool.query("SELECT COUNT(*) AS count FROM orders WHERE status NOT IN ('cancelled', 'returned')");
     const [[pendingRow]] = await pool.query("SELECT COUNT(*) AS count FROM orders WHERE status = 'pending'");
     const [[salesRow]] = await pool.query("SELECT COALESCE(SUM(unit_price_dt * amount), 0) AS total FROM orders WHERE status = 'delivered'");
+    const [[monthOrdersRow]] = await pool.query(
+      "SELECT COUNT(*) AS count FROM orders WHERE DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')"
+    );
+    const [[monthSalesRow]] = await pool.query(
+      "SELECT COALESCE(SUM(unit_price_dt * amount), 0) AS total FROM orders WHERE status = 'delivered' AND DATE_FORMAT(COALESCE(delivered_at, created_at), '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')"
+    );
 
     res.json({
       ordersCount: Number(ordersCountRow.count || 0),
       pendingCount: Number(pendingRow.count || 0),
-      totalSalesDt: Number(salesRow.total || 0)
+      totalSalesDt: Number(salesRow.total || 0),
+      monthOrdersCount: Number(monthOrdersRow.count || 0),
+      monthSalesDt: Number(monthSalesRow.total || 0)
     });
   } catch (error) {
     console.error(error);

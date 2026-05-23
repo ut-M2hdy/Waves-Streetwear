@@ -484,6 +484,8 @@ async function loadSummary() {
       <div class="admin-card"><strong>Total Orders</strong><span>${data.ordersCount}</span></div>
       <div class="admin-card"><strong>Pending</strong><span>${data.pendingCount}</span></div>
       <div class="admin-card"><strong>Total Sales</strong><span>${Number(data.totalSalesDt).toFixed(2)} Dt</span></div>
+      <div class="admin-card"><strong>Orders (this month)</strong><span>${Number(data.monthOrdersCount || 0)}</span></div>
+      <div class="admin-card"><strong>Sales (this month)</strong><span>${Number(data.monthSalesDt || 0).toFixed(2)} Dt</span></div>
     `;
   } catch {
     showSectionError(statsEl, "Server not reachable. Start backend first.");

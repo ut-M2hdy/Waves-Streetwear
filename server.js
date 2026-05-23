@@ -234,6 +234,23 @@ async function ensureGuestProfilesSchema() {
   );
 }
 
+async function ensureDeletedUsersSchema() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS users_deleted (
+      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+      original_user_id INT UNSIGNED NULL,
+      full_name VARCHAR(160) NULL,
+      phone VARCHAR(30) NULL,
+      address TEXT NULL,
+      role VARCHAR(30) NULL,
+      created_at DATETIME NULL,
+      deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      deleted_by_user_id INT UNSIGNED NULL,
+      PRIMARY KEY (id)
+    ) ENGINE=InnoDB`
+  );
+}
+
 async function ensureProductsSchema() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS products (
@@ -1616,6 +1633,36 @@ app.delete("/api/admin/revenues/adjustments/:id", requireAdmin, async (req, res)
   }
 });
 
+app.get("/api/admin/users/deleted", requireAdmin, async (_req, res) => {
+  try {
+    await ensureDeletedUsersSchema();
+    const [rows] = await pool.query(
+      `SELECT d.id, d.original_user_id, d.full_name, d.phone, d.address, d.role, d.created_at, d.deleted_at,
+              u.full_name AS deleted_by_name
+       FROM users_deleted d
+       LEFT JOIN users u ON u.id = d.deleted_by_user_id
+       ORDER BY d.id DESC`
+    );
+
+    res.json({
+      users: rows.map((row) => ({
+        id: Number(row.id || 0),
+        originalUserId: row.original_user_id ? Number(row.original_user_id) : null,
+        fullName: row.full_name || "",
+        phone: row.phone || "",
+        address: row.address || "",
+        role: row.role || "",
+        createdAt: row.created_at || null,
+        deletedAt: row.deleted_at || null,
+        deletedByName: row.deleted_by_name || ""
+      }))
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not load deleted users." });
+  }
+});
+
 app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
   let connection;
   try {
@@ -1631,11 +1678,31 @@ app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    const [existingRows] = await connection.query("SELECT id FROM users WHERE id = ? LIMIT 1", [id]);
+    await ensureDeletedUsersSchema();
+    const [existingRows] = await connection.query(
+      "SELECT id, full_name, phone, address, role, created_at FROM users WHERE id = ? LIMIT 1",
+      [id]
+    );
     if (!existingRows.length) {
       await connection.rollback();
       return res.status(404).json({ message: "User not found." });
     }
+
+    const userRow = existingRows[0];
+    await connection.query(
+      `INSERT INTO users_deleted
+       (original_user_id, full_name, phone, address, role, created_at, deleted_by_user_id, deleted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        Number(userRow.id),
+        userRow.full_name || null,
+        userRow.phone || null,
+        userRow.address || null,
+        userRow.role || null,
+        userRow.created_at || null,
+        req.session.user?.id ? Number(req.session.user.id) : null
+      ]
+    );
 
     await connection.query("UPDATE orders SET user_id = NULL WHERE user_id = ?", [id]);
     await connection.query("DELETE FROM users WHERE id = ?", [id]);

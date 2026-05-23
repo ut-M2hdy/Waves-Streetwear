@@ -108,6 +108,19 @@ CREATE TABLE IF NOT EXISTS guest_profiles (
 --   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 --   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 --   PRIMARY KEY (id),
+
+CREATE TABLE IF NOT EXISTS users_deleted (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  original_user_id INT UNSIGNED NULL,
+  full_name VARCHAR(160) NULL,
+  phone VARCHAR(30) NULL,
+  address TEXT NULL,
+  role VARCHAR(30) NULL,
+  created_at DATETIME NULL,
+  deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_by_user_id INT UNSIGNED NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB;
 --   UNIQUE KEY uq_guest_profiles_phone (phone)
 -- ) ENGINE=InnoDB;
 

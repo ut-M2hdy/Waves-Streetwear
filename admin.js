@@ -11,6 +11,8 @@ const usersSearchInput = document.getElementById("admin-users-search");
 const notUsersSearchInput = document.getElementById("admin-not-users-search");
 const revenuesEl = document.getElementById("admin-revenues");
 const deletedRevenuesEl = document.getElementById("admin-deleted-revenues");
+const deletedRevenuesListEl = document.getElementById("admin-deleted-revenues-list");
+const deletedUsersListEl = document.getElementById("admin-deleted-users-list");
 const monthlySalesEl = document.getElementById("admin-monthly-sales");
 const monthlyRevenuesEl = document.getElementById("admin-monthly-revenues");
 const revenueAdjustForm = document.getElementById("admin-revenue-adjust-form");
@@ -451,7 +453,7 @@ adminNavButtons.forEach((btn) => {
     showAdminSection(btn.dataset.target);
 
     if (btn.dataset.target === "section-deleted-revenues") {
-      await loadDeletedRevenues();
+      await Promise.all([loadDeletedRevenues(), loadDeletedUsers()]);
     }
   });
 });
@@ -1219,31 +1221,27 @@ async function loadRevenues() {
 }
 
 async function loadDeletedRevenues() {
-  if (!deletedRevenuesEl) return;
+  if (!deletedRevenuesEl && !deletedRevenuesListEl) return;
 
   let response;
   try {
     response = await fetch("/api/admin/revenues/adjustments/deleted", { cache: "no-store" });
   } catch {
-    showSectionError(deletedRevenuesEl, "Server not reachable. Start backend first.");
+    showSectionError(deletedRevenuesEl || deletedRevenuesListEl, "Server not reachable. Start backend first.");
     return;
   }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    showSectionError(deletedRevenuesEl, payload.message || "Could not load deleted actions.");
+    showSectionError(deletedRevenuesEl || deletedRevenuesListEl, payload.message || "Could not load deleted actions.");
     return;
   }
 
   const payload = await response.json();
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
 
-  if (!actions.length) {
-    deletedRevenuesEl.innerHTML = '<p class="desc">No deleted actions yet.</p>';
-    return;
-  }
-
-  deletedRevenuesEl.innerHTML = actions.map((entry) => `
+  const html = actions.length
+    ? actions.map((entry) => `
     <article class="history-item revenue-item ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">
       <div class="meta">
         <div class="name">${entry.title}</div>
@@ -1252,6 +1250,54 @@ async function loadDeletedRevenues() {
       <div class="desc">Deleted by: <strong>${entry.deletedByName || "Unknown"}</strong></div>
       <div class="desc">Deleted at: ${entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : "-"}</div>
       <div class="desc">Original date: ${entry.created_at ? new Date(entry.created_at).toLocaleString() : "-"}</div>
+    </article>
+  `).join("")
+    : '<p class="desc">No deleted actions yet.</p>';
+
+  if (deletedRevenuesEl) {
+    deletedRevenuesEl.innerHTML = html;
+  }
+  if (deletedRevenuesListEl) {
+    deletedRevenuesListEl.innerHTML = html;
+  }
+}
+
+async function loadDeletedUsers() {
+  if (!deletedUsersListEl) return;
+
+  let response;
+  try {
+    response = await fetch("/api/admin/users/deleted", { cache: "no-store" });
+  } catch {
+    showSectionError(deletedUsersListEl, "Server not reachable. Start backend first.");
+    return;
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    showSectionError(deletedUsersListEl, payload.message || "Could not load deleted users.");
+    return;
+  }
+
+  const payload = await response.json();
+  const users = Array.isArray(payload.users) ? payload.users : [];
+
+  if (!users.length) {
+    deletedUsersListEl.innerHTML = '<p class="desc">No deleted users yet.</p>';
+    return;
+  }
+
+  deletedUsersListEl.innerHTML = users.map((user) => `
+    <article class="history-item">
+      <div class="meta">
+        <div class="name">${escapeHtml(user.fullName || "-")}</div>
+        <div class="price">${escapeHtml(user.role || "-")}</div>
+      </div>
+      <div class="desc">Phone: ${escapeHtml(user.phone || "-")}</div>
+      <div class="desc">Address: ${escapeHtml(user.address || "-")}</div>
+      <div class="desc">Deleted by: <strong>${escapeHtml(user.deletedByName || "Unknown")}</strong></div>
+      <div class="desc">Deleted at: ${user.deletedAt ? new Date(user.deletedAt).toLocaleString() : "-"}</div>
+      <div class="desc">Created: ${user.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
     </article>
   `).join("");
 }
@@ -1666,6 +1712,7 @@ revenueAdjustForm?.addEventListener("submit", async (event) => {
     loadNotUsers(),
     loadRevenues(),
     loadDeletedRevenues(),
+    loadDeletedUsers(),
     loadMonthlyRevenuesOverview()
   ]);
 })();

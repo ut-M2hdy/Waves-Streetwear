@@ -203,7 +203,10 @@ export default function Admin() {
 
         <section className="order-card admin-section" id="section-deleted-revenues">
           <h2>Deleted actions</h2>
+          <h3>Revenues</h3>
           <div id="admin-deleted-revenues-list" className="history-list"></div>
+          <h3>Users</h3>
+          <div id="admin-deleted-users-list" className="history-list"></div>
         </section>
 
         <section className="order-card admin-section" id="section-users">
@@ -215,6 +218,13 @@ export default function Admin() {
           <h2>Not Users</h2>
           <div id="admin-not-users" className="history-list"></div>
         </section>
+        <dialog id="admin-month-details-dialog" aria-labelledby="admin-month-details-title">
+          <div className="modal-head">
+            <h3 id="admin-month-details-title"></h3>
+            <button type="button" id="admin-month-details-close" className="x-btn" aria-label="Close dialog">×</button>
+          </div>
+          <div id="admin-month-details-body"></div>
+        </dialog>
       </main>
 
       <footer className="site-footer">

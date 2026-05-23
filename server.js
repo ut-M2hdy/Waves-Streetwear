@@ -12,6 +12,7 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const DEFAULT_DELIVERY_FEE_DT = Number(process.env.DEFAULT_DELIVERY_FEE_DT || 9);
 const SEWING_COST_DT = Number(process.env.SEWING_COST_DT || 35);
+const SCENE_STEALER_SEWING_COST_DT = Number(process.env.SCENE_STEALER_SEWING_COST_DT || 25);
 const PRODUCTS_CACHE_TTL_MS = Number(process.env.PRODUCTS_CACHE_TTL_MS || 30_000);
 const KEEP_WARM_URL = String(process.env.KEEP_WARM_URL || "").trim();
 const KEEP_WARM_INTERVAL_MS = Number(process.env.KEEP_WARM_INTERVAL_MS || 10 * 60 * 1000);
@@ -153,6 +154,12 @@ function normalizePhone(phone) {
 
 function isValidTunisiaPhone(phone) {
   return /^\+216\d{8}$/.test(normalizePhone(phone));
+}
+
+function getSewingCostPerItem(wave) {
+  return String(wave || "").trim().toLowerCase() === "scene stealer"
+    ? SCENE_STEALER_SEWING_COST_DT
+    : SEWING_COST_DT;
 }
 
 const ALLOWED_ORDER_SIZES = new Set(["S", "M", "L", "XL", "XXL"]);
@@ -1324,11 +1331,13 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
     const currentMonth = String(monthRow?.[0]?.current_month || "");
 
     const [salesRows] = await pool.query(
-      `SELECT id, product_name, amount, unit_price_dt, COALESCE(delivered_at, created_at) AS effective_date
-       FROM orders
-       WHERE status = 'delivered'
-         AND DATE_FORMAT(COALESCE(delivered_at, created_at), '%Y-%m') = ?
-       ORDER BY effective_date DESC, id DESC`,
+      `SELECT o.id, o.product_name, o.amount, o.unit_price_dt, COALESCE(o.delivered_at, o.created_at) AS effective_date,
+              p.wave AS product_wave
+       FROM orders o
+       LEFT JOIN products p ON p.id = o.product_id
+       WHERE o.status = 'delivered'
+         AND DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m') = ?
+       ORDER BY effective_date DESC, o.id DESC`,
       [currentMonth]
     );
 
@@ -1344,7 +1353,7 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
       const amount = Number(row.amount || 0);
       const unitPrice = Number(row.unit_price_dt || 0);
       const grossProduct = unitPrice * amount;
-      const sewingCost = SEWING_COST_DT * amount;
+      const sewingCost = getSewingCostPerItem(row.product_wave) * amount;
       return [
         {
           kind: "sale_add",
@@ -1398,12 +1407,13 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
     await ensureOrdersDeliveredAtColumn();
 
     const [saleRows] = await pool.query(
-      `SELECT DATE_FORMAT(COALESCE(delivered_at, created_at), '%Y-%m') AS month_key,
-              COALESCE(SUM((unit_price_dt - ?) * amount), 0) AS sales_net_dt
-       FROM orders
-       WHERE status = 'delivered'
-       GROUP BY DATE_FORMAT(COALESCE(delivered_at, created_at), '%Y-%m')`,
-      [SEWING_COST_DT]
+      `SELECT DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m') AS month_key,
+              COALESCE(SUM((o.unit_price_dt - CASE WHEN p.wave = 'Scene Stealer' THEN ? ELSE ? END) * o.amount), 0) AS sales_net_dt
+       FROM orders o
+       LEFT JOIN products p ON p.id = o.product_id
+       WHERE o.status = 'delivered'
+       GROUP BY DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m')`,
+      [SCENE_STEALER_SEWING_COST_DT, SEWING_COST_DT]
     );
 
     const [adjustmentRows] = await pool.query(
@@ -1467,11 +1477,13 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
     }
 
     const [salesRows] = await pool.query(
-      `SELECT id, product_name, amount, unit_price_dt, COALESCE(delivered_at, created_at) AS effective_date
-       FROM orders
-       WHERE status = 'delivered'
-         AND DATE_FORMAT(COALESCE(delivered_at, created_at), '%Y-%m') = ?
-       ORDER BY effective_date DESC, id DESC`,
+      `SELECT o.id, o.product_name, o.amount, o.unit_price_dt, COALESCE(o.delivered_at, o.created_at) AS effective_date,
+              p.wave AS product_wave
+       FROM orders o
+       LEFT JOIN products p ON p.id = o.product_id
+       WHERE o.status = 'delivered'
+         AND DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m') = ?
+       ORDER BY effective_date DESC, o.id DESC`,
       [monthKey]
     );
 
@@ -1487,7 +1499,7 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
       const amount = Number(row.amount || 0);
       const unitPrice = Number(row.unit_price_dt || 0);
       const grossProduct = unitPrice * amount;
-      const sewingCost = SEWING_COST_DT * amount;
+      const sewingCost = getSewingCostPerItem(row.product_wave) * amount;
       return [
         {
           kind: "sale_add",

@@ -1176,7 +1176,7 @@ async function loadRevenues() {
       </div>
       <div class="desc">Delivered hoodies net: ${formatPlainDt(payload.salesNetDt || 0)}</div>
       <div class="desc">Manual actions total: ${formatPlainDt(payload.manualAdjustmentsDt || 0)}</div>
-      <div class="desc">Per delivered order: +Product price (without delivery), then -Sewing cost (35 Dt x amount).</div>
+      <div class="desc">Per delivered order: +Product price (without delivery), then -Sewing cost (Scene Stealer 25 Dt, others 35 Dt x amount).</div>
       <div class="desc">This section resets each new month. Previous months are saved in Monthly revenues fiche.</div>
     </article>
   `;

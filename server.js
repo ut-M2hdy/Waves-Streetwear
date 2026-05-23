@@ -918,7 +918,7 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
     await ensureGuestProfilesSchema();
     const [rows] = await pool.query(
       `SELECT o.id, o.user_id, o.product_name, o.color, o.size, o.amount, o.unit_price_dt, o.delivery_fee_dt, o.total_price_dt, o.note, o.status, o.delivered_at, o.cancelled_at, o.returned_at, o.created_at,
-              o.full_name AS order_full_name, o.phone AS order_phone,
+              o.full_name AS order_full_name, o.phone AS order_phone, o.address,
               p.image_url AS product_image_url,
               u.full_name AS account_name, u.phone AS account_phone,
               COALESCE(u.is_verified, gp.is_verified, 0) AS contact_is_verified,

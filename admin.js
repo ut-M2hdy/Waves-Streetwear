@@ -951,6 +951,7 @@ function renderOrdersMarkup(orders) {
     const safeColor = escapeHtml(o.color || "-");
     const safeSize = escapeHtml(o.size || "-");
     const safeAmount = escapeHtml(o.amount || "-");
+    const safeAddress = escapeHtml(o.address || "-");
     const safeNote = escapeHtml(o.note ? o.note : "-");
     const safeImageAlt = productName;
 
@@ -964,6 +965,7 @@ function renderOrdersMarkup(orders) {
         <div class="price">${total.toFixed(2)} Dt</div>
       </div>
       <div class="desc">Buyer: <strong>${buyerName}</strong> (<strong>${buyerPhone}</strong>)</div>
+      <div class="desc">Address: <strong>${safeAddress}</strong></div>
       ${accountSigns ? `<div class="desc">${accountSigns}</div>` : ""}
       <div class="desc">Color: <strong>${safeColor}</strong> • Size: <strong>${safeSize}</strong> • Amount: <strong>${safeAmount}</strong></div>
       <div class="desc">Product: <strong>${productTotal.toFixed(2)} Dt</strong> + Delivery: <strong>${delivery > 0 ? `${delivery.toFixed(2)} Dt` : "OFF"}</strong> = Total: <strong>${total.toFixed(2)} Dt</strong></div>

@@ -945,8 +945,9 @@ function renderOrdersMarkup(orders) {
       isVerified ? '<span class="admin-user-sign sign-verified">Verified</span>' : "",
       isBlacklisted ? '<span class="admin-user-sign sign-blacklisted">Blacklisted</span>' : ""
     ].filter(Boolean).join(" ");
-    const buyerName = escapeHtml(o.account_name || o.order_full_name || "-");
-    const buyerPhone = escapeHtml(o.account_phone || o.order_phone || "-");
+    const userName = escapeHtml(o.account_name || "-");
+    const buyerName = escapeHtml(o.order_full_name || "-");
+    const buyerPhone = escapeHtml(o.order_phone || o.account_phone || "-");
     const productName = escapeHtml(o.product_name || "-");
     const safeColor = escapeHtml(o.color || "-");
     const safeSize = escapeHtml(o.size || "-");
@@ -964,6 +965,7 @@ function renderOrdersMarkup(orders) {
         <div class="name">#${o.id} - ${productName}</div>
         <div class="price">${total.toFixed(2)} Dt</div>
       </div>
+      <div class="desc">User: <strong>${userName}</strong></div>
       <div class="desc">Buyer: <strong>${buyerName}</strong> (<strong>${buyerPhone}</strong>)</div>
       <div class="desc">Address: <strong>${safeAddress}</strong></div>
       ${accountSigns ? `<div class="desc">${accountSigns}</div>` : ""}

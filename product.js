@@ -75,7 +75,7 @@ function isValidFullName(fullName) {
 enforcePhonePrefix(phoneInput);
 
 function parseProductColors(row, fallbackColors = ["W"]) {
-  const allowed = new Set(["B", "W", "Br", "P", "Grey"]);
+  const allowed = new Set(["B", "W", "Br", "P", "Grey", "BC", "Be"]);
   const parsed = String(row?.colors_csv || "")
     .split(",")
     .map((item) => item.trim())

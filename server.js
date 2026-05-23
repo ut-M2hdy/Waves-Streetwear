@@ -161,7 +161,9 @@ const COLOR_CODE_TO_LABEL = {
   W: "White",
   Br: "Brown",
   P: "Pink",
-  Grey: "Grey"
+  Grey: "Grey",
+  BC: "Off White",
+  Be: "Light Beige"
 };
 const COLOR_LABEL_TO_CODE = Object.fromEntries(
   Object.entries(COLOR_CODE_TO_LABEL).map(([code, label]) => [String(label).toLowerCase(), code])

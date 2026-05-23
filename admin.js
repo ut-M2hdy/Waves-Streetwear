@@ -25,7 +25,7 @@ const monthDetailsCloseBtn = document.getElementById("admin-month-details-close"
 const adminSections = document.querySelectorAll(".admin-section");
 const adminNavButtons = document.querySelectorAll(".admin-nav-btn");
 const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned", "cancelled"];
-const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey"];
+const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey", "BC", "Be"];
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Check DB health - returns true if available, false if unavailable
@@ -170,7 +170,7 @@ function firstImagePath(rawValue) {
     .filter(Boolean)[0] || "";
 }
 
-const ALLOWED_COLORS = new Set(["B", "W", "Br", "P", "Grey"]);
+const ALLOWED_COLORS = new Set(["B", "W", "Br", "P", "Grey", "BC", "Be"]);
 
 function parseColorsCsvValue(colorsCsv) {
   const parsed = String(colorsCsv || "")

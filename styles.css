@@ -736,6 +736,14 @@ textarea { resize: vertical; min-height: 70px; }
   background: #9ca3af;
   border-color: #6b7280;
 }
+.color-dot[data-color="BC"] {
+  background: #e7e7db;
+  border-color: #d1d1c6;
+}
+.color-dot[data-color="Be"] {
+  background: #e7dcbe;
+  border-color: #d1c6a9;
+}
 .product-color {
   margin-top: 2px;
 }

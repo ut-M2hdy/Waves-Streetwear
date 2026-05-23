@@ -3,7 +3,9 @@ const COLOR_LABELS = {
   W: "White",
   Br: "Brown",
   P: "Pink",
-  Grey: "Grey"
+  Grey: "Grey",
+  BC: "Off White",
+  Be: "Light Beige"
 };
 
 function parseColorImageMap(rawValue) {

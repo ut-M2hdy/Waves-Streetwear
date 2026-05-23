@@ -952,7 +952,7 @@ function renderOrdersMarkup(orders) {
     const safeColor = escapeHtml(o.color || "-");
     const safeSize = escapeHtml(o.size || "-");
     const safeAmount = escapeHtml(o.amount || "-");
-    const safeAddress = escapeHtml(o.address || "-");
+    const safeAddress = escapeHtml(o.order_address || "-");
     const safeNote = escapeHtml(o.note ? o.note : "-");
     const safeImageAlt = productName;
 

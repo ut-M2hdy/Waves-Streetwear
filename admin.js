@@ -26,6 +26,10 @@ const adminSections = document.querySelectorAll(".admin-section");
 const adminNavButtons = document.querySelectorAll(".admin-nav-btn");
 const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned", "cancelled"];
 const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey", "BC", "Be"];
+const COLOR_HEX_ALIASES = new Map([
+  ["#e7e7db", "BC"],
+  ["#e7dcbe", "Be"]
+]);
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Check DB health - returns true if available, false if unavailable
@@ -172,10 +176,17 @@ function firstImagePath(rawValue) {
 
 const ALLOWED_COLORS = new Set(["B", "W", "Br", "P", "Grey", "BC", "Be"]);
 
+function normalizeColorCode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  return COLOR_HEX_ALIASES.get(lower) || raw;
+}
+
 function parseColorsCsvValue(colorsCsv) {
   const parsed = String(colorsCsv || "")
     .split(",")
-    .map((item) => item.trim())
+    .map((item) => normalizeColorCode(item))
     .filter((item) => ALLOWED_COLORS.has(item));
   return parsed.length ? parsed : ["W"];
 }

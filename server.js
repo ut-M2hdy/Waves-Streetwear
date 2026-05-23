@@ -165,15 +165,26 @@ const COLOR_CODE_TO_LABEL = {
   BC: "Off White",
   Be: "Light Beige"
 };
+const COLOR_HEX_TO_CODE = {
+  "#e7e7db": "BC",
+  "#e7dcbe": "Be"
+};
 const COLOR_LABEL_TO_CODE = Object.fromEntries(
   Object.entries(COLOR_CODE_TO_LABEL).map(([code, label]) => [String(label).toLowerCase(), code])
 );
+
+function normalizeColorCode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  return COLOR_HEX_TO_CODE[lower] || raw;
+}
 
 function parseAllowedProductColors(colorsCsv, mainColor) {
   const allowed = new Set(Object.keys(COLOR_CODE_TO_LABEL));
   const parsed = String(colorsCsv || "")
     .split(",")
-    .map((item) => item.trim())
+    .map((item) => normalizeColorCode(item))
     .filter((item) => allowed.has(item));
 
   if (parsed.length) return parsed;
@@ -826,8 +837,9 @@ app.post("/api/orders", async (req, res) => {
     }
 
     const incomingColor = String(color || "").trim();
-    const incomingCode = COLOR_CODE_TO_LABEL[incomingColor]
-      ? incomingColor
+    const normalizedIncoming = normalizeColorCode(incomingColor);
+    const incomingCode = COLOR_CODE_TO_LABEL[normalizedIncoming]
+      ? normalizedIncoming
       : (COLOR_LABEL_TO_CODE[incomingColor.toLowerCase()] || "");
 
     const allowedColors = parseAllowedProductColors(dbProduct.colors_csv, dbProduct.main_color);

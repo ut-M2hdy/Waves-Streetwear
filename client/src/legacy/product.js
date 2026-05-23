@@ -83,7 +83,13 @@ function parseProductColors(row, fallbackColors = ["W"]) {
   const allowed = new Set(["B", "W", "Br", "P", "Grey", "BC", "Be"]);
   const parsed = String(row?.colors_csv || "")
     .split(",")
-    .map((item) => item.trim())
+    .map((item) => {
+      const raw = String(item || "").trim();
+      const lower = raw.toLowerCase();
+      if (lower === "#e7e7db") return "BC";
+      if (lower === "#e7dcbe") return "Be";
+      return raw;
+    })
     .filter((item) => allowed.has(item));
   return parsed.length ? parsed : fallbackColors;
 }

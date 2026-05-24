@@ -195,7 +195,7 @@ function sendNtfyNotification({ title, message, priority = "high" }) {
   req.end();
 }
 
-function sendSlackNotification({ text }) {
+function sendSlackNotification({ text, blocks, color = "#2eb67d" }) {
   if (!SLACK_ENABLED || !SLACK_WEBHOOK_URL) return;
   let url;
   try {
@@ -205,7 +205,12 @@ function sendSlackNotification({ text }) {
   }
 
   const https = require("https");
-  const payload = JSON.stringify({ text: String(text || "") });
+  const payload = JSON.stringify({
+    text: String(text || ""),
+    attachments: blocks?.length
+      ? [{ color, blocks }]
+      : undefined
+  });
   const options = {
     method: "POST",
     hostname: url.hostname,
@@ -1002,7 +1007,46 @@ app.post("/api/orders", async (req, res) => {
       message: `#${orderId} ${safeProductName}\nColor: ${safeColorLabel} • Size: ${selectedSize} • Amount: ${amountNumber}\nTotal: ${totalDt} Dt\nBuyer: ${fullName}\nPhone: ${resolvedPhone}\nAddress: ${cleanAddress}`
     });
     sendSlackNotification({
-      text: `New order #${orderId}\n${safeProductName}\nColor: ${safeColorLabel} • Size: ${selectedSize} • Amount: ${amountNumber}\nTotal: ${totalDt} Dt\nBuyer: ${fullName} (${resolvedPhone})\nAddress: ${cleanAddress}`
+      text: `New order #${orderId} - ${safeProductName}`,
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: `🧾 New order #${orderId}`
+          }
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Product:* ${safeProductName}`
+          }
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Color*\n${safeColorLabel}` },
+            { type: "mrkdwn", text: `*Size*\n${selectedSize}` },
+            { type: "mrkdwn", text: `*Amount*\n${amountNumber}` },
+            { type: "mrkdwn", text: `*Total*\n${totalDt} Dt` }
+          ]
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Buyer*\n${fullName}` },
+            { type: "mrkdwn", text: `*Phone*\n${resolvedPhone}` }
+          ]
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Address:*\n${cleanAddress}`
+          }
+        }
+      ]
     });
 
     res.status(201).json({ orderId: orderId || result.insertId });

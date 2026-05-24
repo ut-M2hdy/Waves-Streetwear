@@ -12,6 +12,8 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const DEFAULT_DELIVERY_FEE_DT = Number(process.env.DEFAULT_DELIVERY_FEE_DT || 9);
 const SEWING_COST_DT = Number(process.env.SEWING_COST_DT || 35);
+const NTFY_TOPIC_URL = String(process.env.NTFY_TOPIC_URL || "https://ntfy.sh/waves-orders").trim();
+const NTFY_ENABLED = String(process.env.NTFY_ENABLED || "true").toLowerCase() !== "false";
 const SCENE_STEALER_SEWING_COST_DT = Number(process.env.SCENE_STEALER_SEWING_COST_DT || 25);
 const PRODUCTS_CACHE_TTL_MS = Number(process.env.PRODUCTS_CACHE_TTL_MS || 30_000);
 const KEEP_WARM_URL = String(process.env.KEEP_WARM_URL || "").trim();
@@ -160,6 +162,35 @@ function getSewingCostPerItem(wave) {
   return String(wave || "").trim().toLowerCase() === "scene stealer"
     ? SCENE_STEALER_SEWING_COST_DT
     : SEWING_COST_DT;
+}
+
+function sendNtfyNotification({ title, message, priority = "high" }) {
+  if (!NTFY_ENABLED || !NTFY_TOPIC_URL) return;
+  let url;
+  try {
+    url = new URL(NTFY_TOPIC_URL);
+  } catch {
+    return;
+  }
+
+  const https = require("https");
+  const options = {
+    method: "POST",
+    hostname: url.hostname,
+    path: url.pathname + url.search,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Title": title || "New order",
+      "Priority": priority
+    }
+  };
+
+  const req = https.request(options, (res) => {
+    res.on("data", () => {});
+  });
+  req.on("error", () => {});
+  req.write(String(message || ""));
+  req.end();
 }
 
 const ALLOWED_ORDER_SIZES = new Set(["S", "M", "L", "XL", "XXL"]);
@@ -904,7 +935,14 @@ app.post("/api/orders", async (req, res) => {
       ]
     );
 
-    res.status(201).json({ orderId: result.insertId });
+    const orderId = Number(result.insertId || 0);
+    const totalDt = Number(effectiveTotalPrice || 0).toFixed(2);
+    sendNtfyNotification({
+      title: "New order",
+      message: `#${orderId} ${safeProductName}\nColor: ${safeColorLabel} • Size: ${selectedSize} • Amount: ${amountNumber}\nTotal: ${totalDt} Dt\nBuyer: ${fullName}\nPhone: ${resolvedPhone}\nAddress: ${cleanAddress}`
+    });
+
+    res.status(201).json({ orderId: orderId || result.insertId });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not create order." });

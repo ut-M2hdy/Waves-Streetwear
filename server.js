@@ -1007,7 +1007,7 @@ app.post("/api/orders", async (req, res) => {
       message: `#${orderId} ${safeProductName}\nColor: ${safeColorLabel} • Size: ${selectedSize} • Amount: ${amountNumber}\nTotal: ${totalDt} Dt\nBuyer: ${fullName}\nPhone: ${resolvedPhone}\nAddress: ${cleanAddress}`
     });
     sendSlackNotification({
-      text: `New order #${orderId} - ${safeProductName}`,
+      text: `<!channel> New order #${orderId} - ${safeProductName}`,
       blocks: [
         {
           type: "header",

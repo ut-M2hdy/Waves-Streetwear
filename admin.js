@@ -25,6 +25,8 @@ const monthDetailsBodyEl = document.getElementById("admin-month-details-body");
 const monthDetailsCloseBtn = document.getElementById("admin-month-details-close");
 const adminSections = document.querySelectorAll(".admin-section");
 const adminNavButtons = document.querySelectorAll(".admin-nav-btn");
+const deletedActionButtons = document.querySelectorAll("[data-deleted-target]");
+const deletedActionPanels = document.querySelectorAll(".deleted-actions-panel");
 const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned"];
 const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey", "BC", "Be"];
 const COLOR_HEX_ALIASES = new Map([
@@ -460,6 +462,12 @@ function showAdminSection(sectionId) {
   updateOlderOrdersButtonVisibility();
 }
 
+function showDeletedActionsPanel(panelId) {
+  deletedActionPanels.forEach((panel) => {
+    panel.classList.toggle("hidden", panel.id !== panelId);
+  });
+}
+
 adminNavButtons.forEach((btn) => {
   btn.addEventListener("click", async () => {
     showAdminSection(btn.dataset.target);
@@ -467,6 +475,14 @@ adminNavButtons.forEach((btn) => {
     if (btn.dataset.target === "section-deleted-revenues") {
       await Promise.all([loadDeletedRevenues(), loadDeletedUsers(), loadDeletedOrders()]);
     }
+  });
+});
+
+deletedActionButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.deletedTarget;
+    if (!target) return;
+    showDeletedActionsPanel(target);
   });
 });
 

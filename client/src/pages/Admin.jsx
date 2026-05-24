@@ -203,12 +203,23 @@ export default function Admin() {
 
         <section className="order-card admin-section" id="section-deleted-revenues">
           <h2>Deleted actions</h2>
-          <h3>Revenues</h3>
-          <div id="admin-deleted-revenues-list" className="history-list"></div>
-          <h3>Users</h3>
-          <div id="admin-deleted-users-list" className="history-list"></div>
-          <h3>Orders</h3>
-          <div id="admin-deleted-orders-list" className="history-list"></div>
+          <div className="btn-row" style={{ gap: "10px", flexWrap: "wrap" }}>
+            <button type="button" className="btn" data-deleted-target="deleted-revenues-panel">Revenues</button>
+            <button type="button" className="btn" data-deleted-target="deleted-users-panel">Users</button>
+            <button type="button" className="btn" data-deleted-target="deleted-orders-panel">Orders</button>
+          </div>
+          <div id="deleted-revenues-panel" className="deleted-actions-panel hidden">
+            <h3>Revenues</h3>
+            <div id="admin-deleted-revenues-list" className="history-list"></div>
+          </div>
+          <div id="deleted-users-panel" className="deleted-actions-panel hidden">
+            <h3>Users</h3>
+            <div id="admin-deleted-users-list" className="history-list"></div>
+          </div>
+          <div id="deleted-orders-panel" className="deleted-actions-panel hidden">
+            <h3>Orders</h3>
+            <div id="admin-deleted-orders-list" className="history-list"></div>
+          </div>
         </section>
 
         <section className="order-card admin-section" id="section-users">

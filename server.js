@@ -14,6 +14,8 @@ const DEFAULT_DELIVERY_FEE_DT = Number(process.env.DEFAULT_DELIVERY_FEE_DT || 9)
 const SEWING_COST_DT = Number(process.env.SEWING_COST_DT || 35);
 const NTFY_TOPIC_URL = String(process.env.NTFY_TOPIC_URL || "https://ntfy.sh/waves-orders").trim();
 const NTFY_ENABLED = String(process.env.NTFY_ENABLED || "true").toLowerCase() !== "false";
+const SLACK_WEBHOOK_URL = String(process.env.SLACK_WEBHOOK_URL || "").trim();
+const SLACK_ENABLED = String(process.env.SLACK_ENABLED || "true").toLowerCase() !== "false";
 const SCENE_STEALER_SEWING_COST_DT = Number(process.env.SCENE_STEALER_SEWING_COST_DT || 25);
 const PRODUCTS_CACHE_TTL_MS = Number(process.env.PRODUCTS_CACHE_TTL_MS || 30_000);
 const KEEP_WARM_URL = String(process.env.KEEP_WARM_URL || "").trim();
@@ -190,6 +192,35 @@ function sendNtfyNotification({ title, message, priority = "high" }) {
   });
   req.on("error", () => {});
   req.write(String(message || ""));
+  req.end();
+}
+
+function sendSlackNotification({ text }) {
+  if (!SLACK_ENABLED || !SLACK_WEBHOOK_URL) return;
+  let url;
+  try {
+    url = new URL(SLACK_WEBHOOK_URL);
+  } catch {
+    return;
+  }
+
+  const https = require("https");
+  const payload = JSON.stringify({ text: String(text || "") });
+  const options = {
+    method: "POST",
+    hostname: url.hostname,
+    path: url.pathname + url.search,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(payload)
+    }
+  };
+
+  const req = https.request(options, (res) => {
+    res.on("data", () => {});
+  });
+  req.on("error", () => {});
+  req.write(payload);
   req.end();
 }
 
@@ -969,6 +1000,9 @@ app.post("/api/orders", async (req, res) => {
     sendNtfyNotification({
       title: "New order",
       message: `#${orderId} ${safeProductName}\nColor: ${safeColorLabel} • Size: ${selectedSize} • Amount: ${amountNumber}\nTotal: ${totalDt} Dt\nBuyer: ${fullName}\nPhone: ${resolvedPhone}\nAddress: ${cleanAddress}`
+    });
+    sendSlackNotification({
+      text: `New order #${orderId}\n${safeProductName}\nColor: ${safeColorLabel} • Size: ${selectedSize} • Amount: ${amountNumber}\nTotal: ${totalDt} Dt\nBuyer: ${fullName} (${resolvedPhone})\nAddress: ${cleanAddress}`
     });
 
     res.status(201).json({ orderId: orderId || result.insertId });

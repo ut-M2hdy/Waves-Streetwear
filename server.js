@@ -285,6 +285,35 @@ async function ensureGuestProfilesSchema() {
   );
 }
 
+async function ensureDeletedOrdersSchema() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS orders_deleted (
+      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+      original_order_id INT UNSIGNED NULL,
+      product_id INT UNSIGNED NULL,
+      product_name VARCHAR(180) NULL,
+      color VARCHAR(30) NULL,
+      size VARCHAR(10) NULL,
+      amount INT NULL,
+      unit_price_dt DECIMAL(10,2) NULL,
+      delivery_fee_dt DECIMAL(10,2) NULL,
+      total_price_dt DECIMAL(10,2) NULL,
+      full_name VARCHAR(160) NULL,
+      phone VARCHAR(30) NULL,
+      address TEXT NULL,
+      note TEXT,
+      status VARCHAR(40) NULL,
+      created_at DATETIME NULL,
+      delivered_at DATETIME NULL,
+      cancelled_at DATETIME NULL,
+      returned_at DATETIME NULL,
+      deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      deleted_by_user_id INT UNSIGNED NULL,
+      PRIMARY KEY (id)
+    ) ENGINE=InnoDB`
+  );
+}
+
 async function ensureDeletedUsersSchema() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS users_deleted (
@@ -1018,6 +1047,106 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not fetch orders." });
+  }
+});
+
+app.get("/api/admin/orders/deleted", requireAdmin, async (_req, res) => {
+  try {
+    await ensureDeletedOrdersSchema();
+    const [rows] = await pool.query(
+      `SELECT d.id, d.original_order_id, d.product_name, d.color, d.size, d.amount,
+              d.unit_price_dt, d.delivery_fee_dt, d.total_price_dt, d.full_name, d.phone, d.address,
+              d.status, d.created_at, d.deleted_at, u.full_name AS deleted_by_name
+       FROM orders_deleted d
+       LEFT JOIN users u ON u.id = d.deleted_by_user_id
+       ORDER BY d.id DESC`
+    );
+
+    res.json({
+      orders: rows.map((row) => ({
+        id: Number(row.original_order_id || row.id || 0),
+        productName: row.product_name || "",
+        color: row.color || "",
+        size: row.size || "",
+        amount: row.amount ?? "",
+        unitPriceDt: row.unit_price_dt ?? 0,
+        deliveryFeeDt: row.delivery_fee_dt ?? 0,
+        totalPriceDt: row.total_price_dt ?? 0,
+        fullName: row.full_name || "",
+        phone: row.phone || "",
+        address: row.address || "",
+        status: row.status || "",
+        createdAt: row.created_at || null,
+        deletedAt: row.deleted_at || null,
+        deletedByName: row.deleted_by_name || ""
+      }))
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not fetch deleted orders." });
+  }
+});
+
+app.delete("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+  let connection;
+  try {
+    const id = Number(req.params.id);
+    if (!id) {
+      return res.status(400).json({ message: "Order id is required." });
+    }
+
+    await ensureDeletedOrdersSchema();
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query("SELECT * FROM orders WHERE id = ? LIMIT 1", [id]);
+    if (!rows.length) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    const order = rows[0];
+    await connection.query(
+      `INSERT INTO orders_deleted
+       (original_order_id, product_id, product_name, color, size, amount, unit_price_dt, delivery_fee_dt, total_price_dt,
+        full_name, phone, address, note, status, created_at, delivered_at, cancelled_at, returned_at, deleted_by_user_id, deleted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        Number(order.id),
+        order.product_id || null,
+        order.product_name || null,
+        order.color || null,
+        order.size || null,
+        order.amount || null,
+        order.unit_price_dt || null,
+        order.delivery_fee_dt || null,
+        order.total_price_dt || null,
+        order.full_name || null,
+        order.phone || null,
+        order.address || null,
+        order.note || null,
+        order.status || null,
+        order.created_at || null,
+        order.delivered_at || null,
+        order.cancelled_at || null,
+        order.returned_at || null,
+        req.session.user?.id ? Number(req.session.user.id) : null
+      ]
+    );
+
+    await connection.query("DELETE FROM orders WHERE id = ?", [id]);
+    await connection.commit();
+    res.json({ ok: true });
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error(error);
+    res.status(500).json({ message: "Could not delete order." });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

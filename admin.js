@@ -13,6 +13,7 @@ const revenuesEl = document.getElementById("admin-revenues");
 const deletedRevenuesEl = document.getElementById("admin-deleted-revenues");
 const deletedRevenuesListEl = document.getElementById("admin-deleted-revenues-list");
 const deletedUsersListEl = document.getElementById("admin-deleted-users-list");
+const deletedOrdersListEl = document.getElementById("admin-deleted-orders-list");
 const monthlySalesEl = document.getElementById("admin-monthly-sales");
 const monthlyRevenuesEl = document.getElementById("admin-monthly-revenues");
 const revenueAdjustForm = document.getElementById("admin-revenue-adjust-form");
@@ -24,7 +25,7 @@ const monthDetailsBodyEl = document.getElementById("admin-month-details-body");
 const monthDetailsCloseBtn = document.getElementById("admin-month-details-close");
 const adminSections = document.querySelectorAll(".admin-section");
 const adminNavButtons = document.querySelectorAll(".admin-nav-btn");
-const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned", "cancelled"];
+const ORDER_STATUSES = ["pending", "confirmed", "delivered", "returned"];
 const COLOR_OPTIONS = ["B", "W", "Br", "P", "Grey", "BC", "Be"];
 const COLOR_HEX_ALIASES = new Map([
   ["#e7e7db", "BC"],
@@ -464,7 +465,7 @@ adminNavButtons.forEach((btn) => {
     showAdminSection(btn.dataset.target);
 
     if (btn.dataset.target === "section-deleted-revenues") {
-      await Promise.all([loadDeletedRevenues(), loadDeletedUsers()]);
+      await Promise.all([loadDeletedRevenues(), loadDeletedUsers(), loadDeletedOrders()]);
     }
   });
 });
@@ -1022,6 +1023,12 @@ function renderOrdersMarkup(orders) {
               ${status === "returned" ? "return" : status}
             </button>
           `).join("")}
+          <button
+            type="button"
+            class="admin-status-btn status-cancelled admin-delete-order-btn"
+            data-id="${o.id}">
+            delete
+          </button>
         </div>
         ${statusLocked ? `<div class="desc">${lockMessage}</div>` : ""}
       </div>
@@ -1107,6 +1114,40 @@ function bindOrderActionButtons(container) {
         loadMonthlyRevenuesOverview(),
         loadOrders()
       ]);
+    });
+  });
+
+  container.querySelectorAll(".admin-delete-order-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = Number(button.dataset.id);
+      if (!id) return;
+
+      const confirmed = window.confirm("Delete this order? It will move to deleted actions.");
+      if (!confirmed) return;
+
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/admin/orders/${id}`, { method: "DELETE" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showMessage(payload.message || "Could not delete order.");
+          button.disabled = false;
+          return;
+        }
+
+        showMessage("Order deleted.", true);
+        await Promise.all([
+          loadSummary(),
+          loadMonthlySalesOverview(),
+          loadRevenues(),
+          loadMonthlyRevenuesOverview(),
+          loadOrders(),
+          loadDeletedOrders()
+        ]);
+      } catch {
+        showMessage("Could not delete order. Server/network error.");
+        button.disabled = false;
+      }
     });
   });
 }
@@ -1311,6 +1352,48 @@ async function loadDeletedUsers() {
       <div class="desc">Deleted by: <strong>${escapeHtml(user.deletedByName || "Unknown")}</strong></div>
       <div class="desc">Deleted at: ${user.deletedAt ? new Date(user.deletedAt).toLocaleString() : "-"}</div>
       <div class="desc">Created: ${user.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
+    </article>
+  `).join("");
+}
+
+async function loadDeletedOrders() {
+  if (!deletedOrdersListEl) return;
+
+  let response;
+  try {
+    response = await fetch("/api/admin/orders/deleted", { cache: "no-store" });
+  } catch {
+    showSectionError(deletedOrdersListEl, "Server not reachable. Start backend first.");
+    return;
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    showSectionError(deletedOrdersListEl, payload.message || "Could not load deleted orders.");
+    return;
+  }
+
+  const payload = await response.json();
+  const orders = Array.isArray(payload.orders) ? payload.orders : [];
+
+  if (!orders.length) {
+    deletedOrdersListEl.innerHTML = '<p class="desc">No deleted orders yet.</p>';
+    return;
+  }
+
+  deletedOrdersListEl.innerHTML = orders.map((order) => `
+    <article class="history-item">
+      <div class="meta">
+        <div class="name">#${escapeHtml(order.id)} - ${escapeHtml(order.productName || "-")}</div>
+        <div class="price">${Number(order.totalPriceDt || 0).toFixed(2)} Dt</div>
+      </div>
+      <div class="desc">Buyer: <strong>${escapeHtml(order.fullName || "-")}</strong> (${escapeHtml(order.phone || "-")})</div>
+      <div class="desc">Address: <strong>${escapeHtml(order.address || "-")}</strong></div>
+      <div class="desc">Color: <strong>${escapeHtml(order.color || "-")}</strong> • Size: <strong>${escapeHtml(order.size || "-")}</strong> • Amount: <strong>${escapeHtml(order.amount || "-")}</strong></div>
+      <div class="desc">Status: <strong>${escapeHtml(order.status || "-")}</strong></div>
+      <div class="desc">Deleted by: <strong>${escapeHtml(order.deletedByName || "Unknown")}</strong></div>
+      <div class="desc">Deleted at: ${order.deletedAt ? new Date(order.deletedAt).toLocaleString() : "-"}</div>
+      <div class="desc">Original date: ${order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}</div>
     </article>
   `).join("");
 }
@@ -1726,6 +1809,7 @@ revenueAdjustForm?.addEventListener("submit", async (event) => {
     loadRevenues(),
     loadDeletedRevenues(),
     loadDeletedUsers(),
+    loadDeletedOrders(),
     loadMonthlyRevenuesOverview()
   ]);
 })();

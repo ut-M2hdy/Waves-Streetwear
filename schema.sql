@@ -121,6 +121,31 @@ CREATE TABLE IF NOT EXISTS users_deleted (
   deleted_by_user_id INT UNSIGNED NULL,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS orders_deleted (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  original_order_id INT UNSIGNED NULL,
+  product_id INT UNSIGNED NULL,
+  product_name VARCHAR(180) NULL,
+  color VARCHAR(30) NULL,
+  size VARCHAR(10) NULL,
+  amount INT NULL,
+  unit_price_dt DECIMAL(10,2) NULL,
+  delivery_fee_dt DECIMAL(10,2) NULL,
+  total_price_dt DECIMAL(10,2) NULL,
+  full_name VARCHAR(160) NULL,
+  phone VARCHAR(30) NULL,
+  address TEXT NULL,
+  note TEXT,
+  status VARCHAR(40) NULL,
+  created_at DATETIME NULL,
+  delivered_at DATETIME NULL,
+  cancelled_at DATETIME NULL,
+  returned_at DATETIME NULL,
+  deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_by_user_id INT UNSIGNED NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB;
 --   UNIQUE KEY uq_guest_profiles_phone (phone)
 -- ) ENGINE=InnoDB;
 

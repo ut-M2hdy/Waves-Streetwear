@@ -207,6 +207,8 @@ export default function Admin() {
           <div id="admin-deleted-revenues-list" className="history-list"></div>
           <h3>Users</h3>
           <div id="admin-deleted-users-list" className="history-list"></div>
+          <h3>Orders</h3>
+          <div id="admin-deleted-orders-list" className="history-list"></div>
         </section>
 
         <section className="order-card admin-section" id="section-users">

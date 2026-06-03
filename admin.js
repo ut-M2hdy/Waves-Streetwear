@@ -621,6 +621,7 @@ async function loadMonthlyRevenuesOverview() {
 
   const payload = await response.json();
   const months = Array.isArray(payload.months) ? payload.months : [];
+  const overallTotalDt = Number(payload.overallTotalDt || 0);
 
   const totalCard = `
     <article class="history-item revenue-item ${overallTotalDt >= 0 ? "is-add" : "is-remove"}">

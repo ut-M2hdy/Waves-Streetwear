@@ -437,10 +437,22 @@ async function ensureRevenueAdjustmentsSchema() {
       amount_dt DECIMAL(10,2) NOT NULL,
       created_by_user_id INT UNSIGNED NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      moved_to_month VARCHAR(7) NULL,
+      moved_at DATETIME NULL,
       PRIMARY KEY (id),
       CONSTRAINT fk_revenue_adjustments_user FOREIGN KEY (created_by_user_id) REFERENCES users(id)
     ) ENGINE=InnoDB`
   );
+
+  const [columns] = await pool.query("SHOW COLUMNS FROM revenue_adjustments");
+  const columnMap = new Map((columns || []).map((col) => [col.Field, true]));
+
+  if (!columnMap.has("moved_to_month")) {
+    await pool.query("ALTER TABLE revenue_adjustments ADD COLUMN moved_to_month VARCHAR(7) NULL AFTER created_at");
+  }
+  if (!columnMap.has("moved_at")) {
+    await pool.query("ALTER TABLE revenue_adjustments ADD COLUMN moved_at DATETIME NULL AFTER moved_to_month");
+  }
 }
 
 async function ensureRevenueAdjustmentsDeletedSchema() {
@@ -1595,7 +1607,7 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
     );
 
     const [adjustmentRows] = await pool.query(
-      `SELECT id, title, amount_dt, created_at
+      `SELECT id, title, amount_dt, created_at, moved_to_month
        FROM revenue_adjustments
        WHERE DATE_FORMAT(created_at, '%Y-%m') = ?
        ORDER BY created_at DESC, id DESC`,
@@ -1628,7 +1640,8 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
       kind: "adjustment",
       title: row.title,
       amountDt: Number(Number(row.amount_dt || 0).toFixed(2)),
-      created_at: row.created_at
+      created_at: row.created_at,
+      movedToMonth: row.moved_to_month || null
     }));
 
     const entries = [...saleEntries, ...adjustmentEntries].sort((a, b) => {
@@ -1638,7 +1651,9 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
     });
 
     const salesNetDt = saleEntries.reduce((sum, item) => sum + Number(item.amountDt || 0), 0);
-    const manualAdjustmentsDt = adjustmentEntries.reduce((sum, item) => sum + Number(item.amountDt || 0), 0);
+    const manualAdjustmentsDt = adjustmentEntries
+      .filter((item) => !item.movedToMonth)
+      .reduce((sum, item) => sum + Number(item.amountDt || 0), 0);
     const totalDt = salesNetDt + manualAdjustmentsDt;
 
     res.json({
@@ -1671,7 +1686,7 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
 
     const [adjustmentRows] = await pool.query(
       `SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key,
-              COALESCE(SUM(amount_dt), 0) AS manual_dt
+              COALESCE(SUM(CASE WHEN moved_to_month IS NULL THEN amount_dt ELSE 0 END), 0) AS manual_dt
        FROM revenue_adjustments
        GROUP BY DATE_FORMAT(created_at, '%Y-%m')`
     );
@@ -1745,7 +1760,7 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
     );
 
     const [adjustmentRows] = await pool.query(
-      `SELECT id, title, amount_dt, created_at
+      `SELECT id, title, amount_dt, created_at, moved_to_month
        FROM revenue_adjustments
        WHERE DATE_FORMAT(created_at, '%Y-%m') = ?
        ORDER BY created_at DESC, id DESC`,
@@ -1778,7 +1793,8 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
       kind: "adjustment",
       title: row.title,
       amountDt: Number(Number(row.amount_dt || 0).toFixed(2)),
-      created_at: row.created_at
+      created_at: row.created_at,
+      movedToMonth: row.moved_to_month || null
     }));
 
     const entries = [...saleEntries, ...adjustmentEntries].sort((a, b) => {
@@ -1788,7 +1804,9 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
     });
 
     const salesNetDt = saleEntries.reduce((sum, item) => sum + Number(item.amountDt || 0), 0);
-    const manualAdjustmentsDt = adjustmentEntries.reduce((sum, item) => sum + Number(item.amountDt || 0), 0);
+    const manualAdjustmentsDt = adjustmentEntries
+      .filter((item) => !item.movedToMonth)
+      .reduce((sum, item) => sum + Number(item.amountDt || 0), 0);
     const totalDt = salesNetDt + manualAdjustmentsDt;
 
     res.json({
@@ -1835,6 +1853,73 @@ app.post("/api/admin/revenues/adjustments", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not save revenue action." });
+  }
+});
+
+app.post("/api/admin/revenues/adjustments/:id/move-prev-month", requireAdmin, async (req, res) => {
+  let connection;
+  try {
+    await ensureRevenueAdjustmentsSchema();
+
+    const adjustmentId = Number(req.params.id);
+    if (!adjustmentId) {
+      return res.status(400).json({ message: "Revenue action id is required." });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [existingRows] = await connection.query(
+      "SELECT id, title, amount_dt, created_by_user_id, created_at, moved_to_month FROM revenue_adjustments WHERE id = ? LIMIT 1",
+      [adjustmentId]
+    );
+
+    if (!existingRows.length) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Revenue action not found." });
+    }
+
+    const row = existingRows[0];
+    if (row.moved_to_month) {
+      await connection.rollback();
+      return res.status(400).json({ message: "Revenue action already moved." });
+    }
+
+    const amount = Number(row.amount_dt || 0);
+    if (!Number.isFinite(amount) || amount === 0) {
+      await connection.rollback();
+      return res.status(400).json({ message: "Revenue action has no amount to move." });
+    }
+
+    const createdAt = row.created_at ? new Date(row.created_at) : new Date();
+    const safeCreatedAt = Number.isFinite(createdAt.getTime()) ? createdAt : new Date();
+    const prevDate = new Date(safeCreatedAt);
+    prevDate.setMonth(prevDate.getMonth() - 1);
+    const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+
+    await connection.query(
+      `INSERT INTO revenue_adjustments (title, amount_dt, created_by_user_id, created_at)
+       VALUES (?, ?, ?, DATE_SUB(?, INTERVAL 1 MONTH))`,
+      [String(row.title || ""), Number(amount.toFixed(2)), row.created_by_user_id ? Number(row.created_by_user_id) : null, safeCreatedAt]
+    );
+
+    await connection.query(
+      "UPDATE revenue_adjustments SET moved_to_month = ?, moved_at = NOW() WHERE id = ?",
+      [prevMonthKey, adjustmentId]
+    );
+
+    await connection.commit();
+    res.json({ ok: true, movedToMonth: prevMonthKey });
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error(error);
+    res.status(500).json({ message: "Could not move revenue action." });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

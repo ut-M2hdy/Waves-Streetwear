@@ -1262,10 +1262,13 @@ async function loadRevenues() {
         <div class="name">${entry.title}</div>
         <div class="price revenue-amount ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">${formatPlainDt(entry.amountDt)}</div>
       </div>
-      <div class="desc">Type: <strong class="revenue-type ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">${entry.kind === "sale_add" ? "Sale +" : entry.kind === "sewing_remove" ? "Sewing -" : "Manual action"}</strong></div>
+      <div class="desc">Type: <strong class="revenue-type ${Number(entry.amountDt) >= 0 ? "is-add" : "is-remove"}">${entry.kind === "sale_add" ? "Sale +" : entry.kind === "sewing_remove" ? "Sewing -" : "Manual action"}</strong>${entry.movedToMonth ? ` <span class="revenue-moved">Moved to ${entry.movedToMonth}</span>` : ""}</div>
       <div class="desc">Date: ${new Date(entry.created_at).toLocaleString()}</div>
       ${entry.kind === "adjustment" && Number(entry.id) > 0
-        ? `<div class="btn-row"><button type="button" class="btn admin-revenue-delete-btn" data-adjustment-id="${Number(entry.id)}">Remove action</button></div>`
+        ? `<div class="btn-row">
+            <button type="button" class="btn admin-revenue-delete-btn" data-adjustment-id="${Number(entry.id)}">Remove action</button>
+            ${entry.movedToMonth ? "" : `<button type="button" class=\"btn admin-revenue-move-btn\" data-adjustment-id=\"${Number(entry.id)}\">Turn action to the month before</button>`}
+          </div>`
         : ""}
     </article>
   `).join("");
@@ -1295,6 +1298,36 @@ async function loadRevenues() {
         await loadMonthlyRevenuesOverview();
       } catch {
         showMessage("Could not delete revenue action. Server/network error.");
+        button.disabled = false;
+      }
+    });
+  });
+
+  revenuesEl.querySelectorAll(".admin-revenue-move-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const adjustmentId = Number(button.dataset.adjustmentId || 0);
+      if (!adjustmentId) return;
+
+      if (!window.confirm("Move this action to the previous month?")) return;
+
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/admin/revenues/adjustments/${adjustmentId}/move-prev-month`, {
+          method: "POST"
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showMessage(payload.message || "Could not move revenue action.");
+          button.disabled = false;
+          return;
+        }
+
+        showMessage(`Revenue action moved to ${payload.movedToMonth || "previous month"}.`, true);
+        await loadRevenues();
+        await loadMonthlyRevenuesOverview();
+      } catch {
+        showMessage("Could not move revenue action. Server/network error.");
         button.disabled = false;
       }
     });

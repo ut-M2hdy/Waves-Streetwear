@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS revenue_adjustments (
   amount_dt DECIMAL(10,2) NOT NULL,
   created_by_user_id INT UNSIGNED NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  moved_to_month VARCHAR(7) NULL,
+  moved_at DATETIME NULL,
   PRIMARY KEY (id),
   CONSTRAINT fk_revenue_adjustments_user FOREIGN KEY (created_by_user_id) REFERENCES users(id)
 ) ENGINE=InnoDB;

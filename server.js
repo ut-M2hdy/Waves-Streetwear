@@ -1584,12 +1584,12 @@ app.get("/api/admin/revenues", requireAdmin, async (_req, res) => {
     const currentMonth = String(monthRow?.[0]?.current_month || "");
 
     const [salesRows] = await pool.query(
-      `SELECT o.id, o.product_name, o.amount, o.unit_price_dt, COALESCE(o.delivered_at, o.created_at) AS effective_date,
+      `SELECT o.id, o.product_name, o.amount, o.unit_price_dt, o.created_at AS effective_date,
               p.wave AS product_wave
        FROM orders o
        LEFT JOIN products p ON p.id = o.product_id
        WHERE o.status = 'delivered'
-         AND DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m') = ?
+         AND DATE_FORMAT(o.created_at, '%Y-%m') = ?
        ORDER BY effective_date DESC, o.id DESC`,
       [currentMonth]
     );
@@ -1660,12 +1660,12 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
     await ensureOrdersDeliveredAtColumn();
 
     const [saleRows] = await pool.query(
-      `SELECT DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m') AS month_key,
+      `SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS month_key,
               COALESCE(SUM((o.unit_price_dt - CASE WHEN p.wave = 'Scene Stealer' THEN ? ELSE ? END) * o.amount), 0) AS sales_net_dt
        FROM orders o
        LEFT JOIN products p ON p.id = o.product_id
        WHERE o.status = 'delivered'
-       GROUP BY DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m')`,
+       GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')`,
       [SCENE_STEALER_SEWING_COST_DT, SEWING_COST_DT]
     );
 
@@ -1712,7 +1712,11 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
       }))
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-    res.json({ months });
+    const overallSalesNetDt = saleRows.reduce((sum, row) => sum + Number(row.sales_net_dt || 0), 0);
+    const overallManualDt = adjustmentRows.reduce((sum, row) => sum + Number(row.manual_dt || 0), 0);
+    const overallTotalDt = Number((overallSalesNetDt + overallManualDt).toFixed(2));
+
+    res.json({ months, overallTotalDt });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not fetch monthly revenues." });
@@ -1730,12 +1734,12 @@ app.get("/api/admin/revenues/monthly/:month", requireAdmin, async (req, res) => 
     }
 
     const [salesRows] = await pool.query(
-      `SELECT o.id, o.product_name, o.amount, o.unit_price_dt, COALESCE(o.delivered_at, o.created_at) AS effective_date,
+      `SELECT o.id, o.product_name, o.amount, o.unit_price_dt, o.created_at AS effective_date,
               p.wave AS product_wave
        FROM orders o
        LEFT JOIN products p ON p.id = o.product_id
        WHERE o.status = 'delivered'
-         AND DATE_FORMAT(COALESCE(o.delivered_at, o.created_at), '%Y-%m') = ?
+         AND DATE_FORMAT(o.created_at, '%Y-%m') = ?
        ORDER BY effective_date DESC, o.id DESC`,
       [monthKey]
     );

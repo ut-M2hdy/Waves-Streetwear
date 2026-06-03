@@ -527,6 +527,7 @@ async function loadMonthlySalesOverview() {
 
   const payload = await response.json();
   const months = Array.isArray(payload.months) ? payload.months : [];
+  const overallTotalDt = Number(payload.overallTotalDt || 0);
 
   if (!months.length) {
     monthlySalesEl.innerHTML = '<p class="desc">No monthly sells yet.</p>';
@@ -621,12 +622,21 @@ async function loadMonthlyRevenuesOverview() {
   const payload = await response.json();
   const months = Array.isArray(payload.months) ? payload.months : [];
 
+  const totalCard = `
+    <article class="history-item revenue-item ${overallTotalDt >= 0 ? "is-add" : "is-remove"}">
+      <div class="meta">
+        <div class="name">Total (all months)</div>
+        <div class="price revenue-amount ${overallTotalDt >= 0 ? "is-add" : "is-remove"}">${formatSignedDt(overallTotalDt)}</div>
+      </div>
+    </article>
+  `;
+
   if (!months.length) {
-    monthlyRevenuesEl.innerHTML = '<p class="desc">No monthly revenues yet.</p>';
+    monthlyRevenuesEl.innerHTML = `${totalCard}<p class="desc">No monthly revenues yet.</p>`;
     return;
   }
 
-  monthlyRevenuesEl.innerHTML = months.map((item) => `
+  monthlyRevenuesEl.innerHTML = totalCard + months.map((item) => `
     <article class="history-item revenue-item ${Number(item.totalDt) >= 0 ? "is-add" : "is-remove"}">
       <div class="meta">
         <div class="name">${monthLabel(item.monthKey)}</div>

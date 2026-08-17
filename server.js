@@ -133,7 +133,7 @@ app.use((req, res, next) => {
 
 // Serve React production build from client/dist
 app.use("/img", express.static(path.join(__dirname, "img")));
-app.use(express.static(path.join(__dirname, "client", "dist")));
+app.use(express.static(path.join(__dirname, "dist")));
 
 function sanitizeUser(user) {
   return {
@@ -2172,7 +2172,7 @@ app.get("*", (req, res) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({ message: "API route not found" });
   }
-  return res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
+  return res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 checkDatabaseConnection().finally(() => {

@@ -44,7 +44,7 @@ export default function Product() {
               <label>Size
                 <div className="size-swatches">
                   <button type="button" className="size-dot" data-size="S">S</button>
-                  <button type="button" className="size-dot active" data-size="M">M</button>
+                  <button type="button" className="size-dot" data-size="M">M</button>
                   <button type="button" className="size-dot" data-size="L">L</button>
                   <button type="button" className="size-dot" data-size="XL">XL</button>
                   <button type="button" className="size-dot" data-size="XXL">XXL</button>

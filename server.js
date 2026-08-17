@@ -162,7 +162,7 @@ function isValidTunisiaPhone(phone) {
 
 function getSewingCostPerItem(wave) {
   const waveLower = String(wave || "").trim().toLowerCase();
-  return (waveLower === "scene stealer" || waveLower === "cairokee")
+  return (waveLower === "scene stealer" || waveLower === "cairokee" || waveLower === "custom1")
     ? SCENE_STEALER_SEWING_COST_DT
     : SEWING_COST_DT;
 }

@@ -1676,12 +1676,19 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
     await ensureOrdersDeliveredAtColumn();
 
     const [saleRows] = await pool.query(
-      `SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS month_key,
-              COALESCE(SUM((o.unit_price_dt - CASE WHEN p.wave = 'Scene Stealer' THEN ? ELSE ? END) * o.amount), 0) AS sales_net_dt
-       FROM orders o
-       LEFT JOIN products p ON p.id = o.product_id
-       WHERE o.status = 'delivered'
-       GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')`,
+      `SELECT 
+        DATE_FORMAT(o.created_at, '%Y-%m') AS month_key,
+        COALESCE(SUM(o.unit_price_dt * o.amount), 0) AS gross_sales_dt,
+        COALESCE(SUM(
+          CASE 
+            WHEN LOWER(p.wave) IN ('scene stealer', 'cairokee', 'custom1') THEN ? 
+            ELSE ? 
+          END * o.amount
+        ), 0) AS sewing_cost_dt
+      FROM orders o
+      LEFT JOIN products p ON p.id = o.product_id
+      WHERE o.status = 'delivered'
+      GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')`,
       [SCENE_STEALER_SEWING_COST_DT, SEWING_COST_DT]
     );
 
@@ -1697,11 +1704,15 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
     saleRows.forEach((row) => {
       const key = String(row.month_key || "");
       if (!key) return;
+      const grossSales = Number(row.gross_sales_dt || 0);
+      const sewingCost = Number(row.sewing_cost_dt || 0);
+      const salesNet = grossSales - sewingCost;
+      
       map.set(key, {
         monthKey: key,
-        salesNetDt: Number(row.sales_net_dt || 0),
+        salesNetDt: salesNet,
         manualAdjustmentsDt: 0,
-        totalDt: Number(row.sales_net_dt || 0)
+        totalDt: salesNet
       });
     });
 

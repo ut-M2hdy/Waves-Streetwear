@@ -1675,75 +1675,102 @@ app.get("/api/admin/revenues/monthly", requireAdmin, async (_req, res) => {
     await ensureRevenueAdjustmentsSchema();
     await ensureOrdersDeliveredAtColumn();
 
-    const [saleRows] = await pool.query(
+    // Get ALL delivered orders grouped by month (raw data)
+    const [orderRows] = await pool.query(
       `SELECT 
         DATE_FORMAT(o.created_at, '%Y-%m') AS month_key,
-        COALESCE(SUM(o.unit_price_dt * o.amount), 0) AS gross_sales_dt,
-        COALESCE(SUM(
-          CASE 
-            WHEN LOWER(p.wave) IN ('scene stealer', 'cairokee', 'custom1') THEN ? 
-            ELSE ? 
-          END * o.amount
-        ), 0) AS sewing_cost_dt
-      FROM orders o
-      LEFT JOIN products p ON p.id = o.product_id
-      WHERE o.status = 'delivered'
-      GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')`,
-      [SCENE_STEALER_SEWING_COST_DT, SEWING_COST_DT]
+        o.id,
+        o.product_name,
+        o.amount,
+        o.unit_price_dt,
+        o.created_at,
+        p.wave AS product_wave
+       FROM orders o
+       LEFT JOIN products p ON p.id = o.product_id
+       WHERE o.status = 'delivered'
+       ORDER BY o.created_at DESC`
     );
 
+    // Get all manual adjustments
     const [adjustmentRows] = await pool.query(
-      `SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key,
-              COALESCE(SUM(CASE WHEN moved_to_month IS NULL THEN amount_dt ELSE 0 END), 0) AS manual_dt
+      `SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS month_key,
+        amount_dt
        FROM revenue_adjustments
-       GROUP BY DATE_FORMAT(created_at, '%Y-%m')`
+       WHERE moved_to_month IS NULL
+       ORDER BY created_at DESC`
     );
 
-    const map = new Map();
+    // Calculate per month using the SAME logic as the fiche
+    const monthMap = new Map();
 
-    saleRows.forEach((row) => {
-      const key = String(row.month_key || "");
-      if (!key) return;
-      const grossSales = Number(row.gross_sales_dt || 0);
-      const sewingCost = Number(row.sewing_cost_dt || 0);
-      const salesNet = grossSales - sewingCost;
+    // Process orders - using the same getSewingCostPerItem logic
+    orderRows.forEach((row) => {
+      const monthKey = String(row.month_key || "");
+      if (!monthKey) return;
+
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          monthKey: monthKey,
+          salesNetDt: 0,
+          manualAdjustmentsDt: 0,
+          totalDt: 0
+        });
+      }
+
+      const monthData = monthMap.get(monthKey);
+      const amount = Number(row.amount || 0);
+      const unitPrice = Number(row.unit_price_dt || 0);
+      const grossProduct = unitPrice * amount;
       
-      map.set(key, {
-        monthKey: key,
-        salesNetDt: salesNet,
-        manualAdjustmentsDt: 0,
-        totalDt: salesNet
-      });
+      // Use the SAME function that the fiche uses
+      const sewingCost = getSewingCostPerItem(row.product_wave) * amount;
+      
+      monthData.salesNetDt += grossProduct - sewingCost;
     });
 
+    // Process manual adjustments
     adjustmentRows.forEach((row) => {
-      const key = String(row.month_key || "");
-      if (!key) return;
-      const prev = map.get(key) || {
-        monthKey: key,
-        salesNetDt: 0,
-        manualAdjustmentsDt: 0,
-        totalDt: 0
-      };
-      prev.manualAdjustmentsDt = Number(row.manual_dt || 0);
-      prev.totalDt = Number((prev.salesNetDt + prev.manualAdjustmentsDt).toFixed(2));
-      map.set(key, prev);
+      const monthKey = String(row.month_key || "");
+      if (!monthKey) return;
+
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          monthKey: monthKey,
+          salesNetDt: 0,
+          manualAdjustmentsDt: 0,
+          totalDt: 0
+        });
+      }
+
+      const monthData = monthMap.get(monthKey);
+      monthData.manualAdjustmentsDt += Number(row.amount_dt || 0);
     });
 
-    const months = Array.from(map.values())
-      .map((item) => ({
-        ...item,
-        salesNetDt: Number(item.salesNetDt.toFixed(2)),
-        manualAdjustmentsDt: Number(item.manualAdjustmentsDt.toFixed(2)),
-        totalDt: Number(item.totalDt.toFixed(2))
-      }))
+    // Calculate final totals for each month
+    const months = Array.from(monthMap.values())
+      .map((item) => {
+        const total = item.salesNetDt + item.manualAdjustmentsDt;
+        return {
+          ...item,
+          salesNetDt: Number(item.salesNetDt.toFixed(2)),
+          manualAdjustmentsDt: Number(item.manualAdjustmentsDt.toFixed(2)),
+          totalDt: Number(total.toFixed(2))
+        };
+      })
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-    const overallSalesNetDt = saleRows.reduce((sum, row) => sum + Number(row.sales_net_dt || 0), 0);
-    const overallManualDt = adjustmentRows.reduce((sum, row) => sum + Number(row.manual_dt || 0), 0);
+    // Calculate overall totals
+    const overallSalesNetDt = months.reduce((sum, m) => sum + m.salesNetDt, 0);
+    const overallManualDt = months.reduce((sum, m) => sum + m.manualAdjustmentsDt, 0);
     const overallTotalDt = Number((overallSalesNetDt + overallManualDt).toFixed(2));
 
-    res.json({ months, overallTotalDt });
+    res.json({ 
+      months, 
+      overallSalesNetDt, 
+      overallManualDt, 
+      overallTotalDt 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not fetch monthly revenues." });

@@ -32,7 +32,6 @@ export default function Index() {
             <button className="wave-tab" data-wave="1stDrop">Cold Nights Drop</button>
             <button className="wave-tab" data-wave="UPSIDE DOWN">WAVE: UPSIDE DOWN</button>
             <button className="wave-tab" data-wave="CAIROKEE">WAVE: CAIROKEE</button>
-            <button className="wave-tab" data-wave="LEMHAF">WAVE: LEMHAF</button>
           </nav>
           <div className="header-actions">
             <a className="header-link-btn hidden" id="admin-btn" href="/admin">Admin</a>

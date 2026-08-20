@@ -3,7 +3,7 @@ const waveTabs = document.querySelectorAll(".wave-tab");
 const dbLoadingScreen = document.getElementById("db-loading-screen");
 const dbLoadingMessage = document.getElementById("db-loading-message");
 
-let activeWave = "Scene Stealer";
+let activeWave = "WAVE: CAIROKEE";
 const selectedColors = new Map();
 let catalogProducts = [];
 

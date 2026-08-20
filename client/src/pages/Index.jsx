@@ -26,11 +26,11 @@ export default function Index() {
         </div>
         <div className="mobile-menu">
           <nav className="wave-tabs" aria-label="Wave collections">
-            <button className="wave-tab cairokee active" type="button" data-wave="CAIROKEE">
-              WAVE: CAIROKEE <span className="wave-soon-badge">New</span>
-            </button>
-            <button className="wave-tab" type="button" data-wave="Scene Stealer">
+            <button className="wave-tab scene-stealer active" type="button" data-wave="Scene Stealer">
               Scene Stealer <span className="wave-soon-badge">New</span>
+            </button>
+            <button className="wave-tab scene-stealer" type="button" data-wave="CAIROKEE">
+              WAVE: CAIROKEE <span className="wave-soon-badge">New</span>
             </button>
             <button className="wave-tab" data-wave="1stDrop">Cold Nights Drop</button>
             <button className="wave-tab" data-wave="UPSIDE DOWN">WAVE: UPSIDE DOWN</button>

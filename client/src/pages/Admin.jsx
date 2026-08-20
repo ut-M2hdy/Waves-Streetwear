@@ -130,7 +130,6 @@ export default function Admin() {
                 <option value="Scene Stealer">Scene Stealer</option>
                 <option value="1stDrop">Cold Nights Drop</option>
                 <option value="CAIROKEE">CAIROKEE</option>
-                <option value="LEMHAF">LEMHAF</option>
                 <option value="UPSIDE DOWN">UPSIDE DOWN</option>
               </select>
             </label>

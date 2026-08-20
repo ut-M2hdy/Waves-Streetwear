@@ -109,7 +109,6 @@ var e=document.getElementById(`admin-stats`),t=document.getElementById(`admin-pr
           <option value="Scene Stealer" ${String(e.wave)===`Scene Stealer`?`selected`:``}>Scene Stealer</option>
           <option value="1stDrop" ${String(e.wave)===`1stDrop`?`selected`:``}>Cold Nights Drop</option>
           <option value="CAIROKEE" ${String(e.wave)===`CAIROKEE`?`selected`:``}>CAIROKEE</option>
-          <option value="LEMHAF" ${String(e.wave)===`LEMHAF`?`selected`:``}>LEMHAF</option>
           <option value="UPSIDE DOWN" ${String(e.wave)===`UPSIDE DOWN`?`selected`:``}>UPSIDE DOWN</option>
         </select>
       </label>

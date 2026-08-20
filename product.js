@@ -429,7 +429,25 @@ orderForm.addEventListener("submit", async (event) => {
   }
 
   const data = new FormData(orderForm);
+  
+  // Get size and validate
   const size = data.get("size");
+  if (!size || !["S", "M", "L", "XL", "XXL"].includes(size)) {
+    orderConfirmation.textContent = "Please select a size.";
+    orderConfirmation.style.display = "block";
+    orderConfirmation.style.color = "#b91c1c";
+    return;
+  }
+
+  // Get color from the hidden input
+  const colorValue = document.getElementById('color-value')?.value || selectedColor;
+  if (!colorValue) {
+    orderConfirmation.textContent = "Please select a color.";
+    orderConfirmation.style.display = "block";
+    orderConfirmation.style.color = "#b91c1c";
+    return;
+  }
+
   const amount = Number(data.get("amount") || 1);
   const fullName = String(data.get("fullName") || "").trim();
   const phone = String(data.get("phone") || "").trim();
@@ -448,27 +466,30 @@ orderForm.addEventListener("submit", async (event) => {
     orderConfirmation.style.color = "#b91c1c";
     return;
   }
+  
   const subtotal = product.price * amount;
   const effectiveDelivery = DEFAULT_DELIVERY_FEE;
   const total = subtotal + effectiveDelivery;
+
+  console.log('Submitting order with:', {
+    productId: product.id,
+    color: colorValue,
+    size: size,
+    amount: amount
+  });
 
   const response = await fetch("/api/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       productId: product.id,
-      productName: product.name,
-      color: COLOR_LABELS[selectedColor] || selectedColor,
-      size,
+      color: colorValue,  // This is now correctly set
+      size: size,         // This is now correctly set
       amount,
-      unitPriceDt: product.price,
-      deliveryFeeDt: effectiveDelivery,
-      totalPriceDt: total,
       fullName,
       phone,
       address,
-      note,
-      paymentMethod: "cash_on_delivery"
+      note
     })
   });
 

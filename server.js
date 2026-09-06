@@ -162,9 +162,19 @@ function isValidTunisiaPhone(phone) {
 
 function getSewingCostPerItem(wave) {
   const waveLower = String(wave || "").trim().toLowerCase();
-  return (waveLower === "scene stealer" || waveLower === "cairokee" || waveLower === "custom1")
-    ? SCENE_STEALER_SEWING_COST_DT
-    : SEWING_COST_DT;
+  
+  // Check for custom3 first (15 DT)
+  if (waveLower === "enfant") {
+    return 15; // Or you could define a constant like CUSTOM3_SEWING_COST_DT
+  }
+  
+  // Check for scene stealer, cairokee, custom1 (25 DT)
+  if (waveLower === "scene stealer" || waveLower === "cairokee" || waveLower === "custom1") {
+    return SCENE_STEALER_SEWING_COST_DT;
+  }
+  
+  // Default (35 DT)
+  return SEWING_COST_DT;
 }
 
 function sendNtfyNotification({ title, message, priority = "high" }) {
